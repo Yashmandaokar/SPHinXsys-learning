@@ -305,8 +305,8 @@ class StaticConfinementIntegration2ndHalf : public BaseLocalDynamics<BodyPartByC
  * @class StaticConfinement
  * @brief Static confined boundary condition for complex structures.
  */
-class StaticConfinement
-{
+  class StaticConfinement
+  {
   public:
     SimpleDynamics<StaticConfinementDensity> density_summation_;
     SimpleDynamics<StaticConfinementIntegration1stHalf> pressure_relaxation_;
@@ -315,7 +315,7 @@ class StaticConfinement
 
     StaticConfinement(NearShapeSurface &near_surface);
     virtual ~StaticConfinement(){};
-};
+  };
 
 } // namespace fluid_dynamics
 } // namespace SPH

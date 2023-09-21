@@ -91,12 +91,12 @@ class BaseParticles
   public:
     explicit BaseParticles(SPHBody &sph_body, BaseMaterial *base_material);
     virtual ~BaseParticles(){};
-
+    StdLargeVec<Real> p_;				 /**< pressure */
     StdLargeVec<Vecd> pos_;       /**< Position */
     StdLargeVec<Vecd> vel_;       /**< Velocity */
     StdLargeVec<Vecd> acc_;       /**< Acceleration induced by pressure- or stress */
     StdLargeVec<Vecd> acc_prior_; /**< Other, such as gravity and viscous, accelerations computed before acc_ */
-
+    StdLargeVec<Real> drho_dt_;			 /**< density change rate */
     StdLargeVec<Real> Vol_;              /**< Volumetric measure, also area and length of surface and linear particle */
     StdLargeVec<Real> rho_;              /**< Density */
     StdLargeVec<Real> mass_;             /**< Massive measure, also mass per-unit thickness and per-unit cross-section of surface and linear particle */
@@ -186,6 +186,10 @@ class BaseParticles
     void readFromXmlForReloadParticle(std::string &filefullpath);
     XmlEngine *getReloadXmlEngine() { return &reload_xml_engine_; };
     virtual BaseParticles *ThisObjectPtr() { return this; };
+    virtual Vecd getKernelGradient(size_t index_i, size_t index_j, Real dW_ijV_j, Vecd &e_ij)
+		{
+			return dW_ijV_j * e_ij;
+		};
     //----------------------------------------------------------------------
     //		Relation relate volume, surface and linear particles
     //----------------------------------------------------------------------
@@ -285,5 +289,48 @@ class BaseDerivedVariable
   protected:
     StdLargeVec<DataType> derived_variable_;
 };
+
+/**
+	 * @class CompressibleFluidParticles
+	 * @brief Compressible fluid particles.
+	 */
+	class CompressibleFluidParticles : public FluidParticles
+	{
+	public:
+		StdLargeVec<Vecd> mom_;				/**< momentum */
+		StdLargeVec<Vecd> dmom_dt_; 		/**< change rate of momentum */
+		StdLargeVec<Vecd> dmom_dt_prior_;
+		StdLargeVec<Real> E_;	  			/**< total energy per unit volume */
+		StdLargeVec<Real> dE_dt_; 			/**< change rate of total energy */
+		StdLargeVec<Real> dE_dt_prior_;
+		CompressibleFluid &compressible_fluid_;
+
+		CompressibleFluidParticles(SPHBody &sph_body, CompressibleFluid *compressible_fluid);
+		virtual ~CompressibleFluidParticles(){};
+		/** Initialize particle variables used in compressible fluid particle. */
+		virtual void initializeOtherVariables() override;
+		/** Return the ptr of this object. */
+		virtual CompressibleFluidParticles *ThisObjectPtr() override { return this; };
+	};
+/*
+ * @class WeaklyCompressibleFluidParticles
+	 * @brief WeaklyCompressible fluid particles.
+	 */
+	class WeaklyCompressibleFluidParticles : public BaseParticles
+	{
+	public:
+		StdLargeVec<Real> dmass_dt_;	  /**< mass change rate */
+		StdLargeVec<Vecd> mom_;			  /**< momentum */
+		StdLargeVec<Vecd> dmom_dt_;		  /**< change rate of momentum */
+		StdLargeVec<Vecd> dmom_dt_prior_; /**< other, such as gravity and viscous, accelerations, cause momentum loss */
+
+		WeaklyCompressibleFluidParticles(SPHBody &sph_body, Fluid *fluid);
+		virtual ~WeaklyCompressibleFluidParticles(){};
+
+		/** Initialize particle variables used in weakly-compressible fluid particle. */
+		virtual void initializeOtherVariables() override;
+		/** Return the ptr of this object. */
+		virtual WeaklyCompressibleFluidParticles *ThisObjectPtr() override { return this; };
+	};
 } // namespace SPH
 #endif // BASE_PARTICLES_H

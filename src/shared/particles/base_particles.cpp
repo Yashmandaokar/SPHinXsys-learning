@@ -365,6 +365,49 @@ void BaseParticles::readFromXmlForReloadParticle(std::string &filefullpath)
     DataAssembleOperation<loopParticleVariables> loop_variable_namelist;
     loop_variable_namelist(all_particle_data_, variables_to_reload_, read_variable_from_xml);
 }
+
+	//=================================================================================================//
+	CompressibleFluidParticles::
+		CompressibleFluidParticles(SPHBody &sph_body, CompressibleFluid *compressible_fluid)
+		: FluidParticles(sph_body, compressible_fluid),
+		  compressible_fluid_(*compressible_fluid) {}
+	//=================================================================================================//
+	void CompressibleFluidParticles::initializeOtherVariables()
+	{
+		FluidParticles::initializeOtherVariables();
+		/**
+		 *	register sortable particle data
+		 */	
+		registerVariable(mom_, "Momentum");
+		registerVariable(dmom_dt_, "MomentumChangeRate");
+		registerVariable(dmom_dt_prior_, "OtherMomentumChangeRate");
+		registerVariable(E_, "TotalEnergy");
+		registerVariable(dE_dt_, "TotalEnergyChangeRate");
+		registerVariable(dE_dt_prior_, "OtherEnergyChangeRate");
+		/**
+		 *	add output particle data
+		 */	
+		addVariableToWrite<Real>("Pressure");
+	}
+	//=================================================================================================//
+	WeaklyCompressibleFluidParticles::WeaklyCompressibleFluidParticles(SPHBody &sph_body, Fluid *fluid)
+		: FluidParticles(sph_body, fluid) {}
+	//=================================================================================================//
+	void WeaklyCompressibleFluidParticles::initializeOtherVariables()
+	{
+		FluidParticles::initializeOtherVariables();
+		/**
+		 *	register sortable particle data
+		 */	
+		registerVariable(dmass_dt_, "MassChangeRate");
+		registerVariable(mom_, "Momentum");
+		registerVariable(dmom_dt_, "MomentumChangeRate");
+		registerVariable(dmom_dt_prior_, "OtherMomentumChangeRate");
+		/**
+		 *	add output particle data
+		 */	
+		addVariableToWrite<Real>("Pressure");
+	}
 //=================================================================================================//
 } // namespace SPH
   //=====================================================================================================//
