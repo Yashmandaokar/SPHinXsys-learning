@@ -1,0 +1,125 @@
+
+              Welcome to ANSYS Fluent 2021 R1
+
+              Copyright 1987-2021 ANSYS, Inc. All Rights Reserved.
+              Unauthorized use, distribution or duplication is prohibited.
+              This product is subject to U.S. laws governing export and re-export.
+              For full Legal Notice, see documentation.
+
+Build Time: Nov 20 2020 15:49:18 EST  Build Id: 10179  
+ 
+
+*********************************************
+Info: Your license enables 4-way parallel execution.
+For faster simulations, please start the application with the appropriate parallel options.
+*********************************************
+
+
+######################################################################
+            WARNING: License for fluent will expire in 7 days.
+            Please contact your distributor for renewal.
+######################################################################
+
+     --------------------------------------------------------------
+     This is an academic version of ANSYS FLUENT. Usage of this product
+     license is limited to the terms and conditions specified in your ANSYS
+     license form, additional terms section.
+     --------------------------------------------------------------
+Host spawning Node 0 on machine "DESKTOP-2B3UK9C" (win64).
+
+-------------------------------------------------------------------------------
+ID    Hostname         Core  O.S.         PID   Vendor                         
+-------------------------------------------------------------------------------
+n1    DESKTOP-2B3UK9C  2/8  Windows-x64  8908  Intel(R) Core(TM) i7-4770      
+n0*   DESKTOP-2B3UK9C  1/8  Windows-x64  2220  Intel(R) Core(TM) i7-4770      
+host  DESKTOP-2B3UK9C       Windows-x64  2264  Intel(R) Core(TM) i7-4770      
+
+MPI Option Selected: intel
+Selected system interconnect: default
+-------------------------------------------------------------------------------
+
+Cleanup script file is E:\\software\\Softwares_Yash\\SPHinXsys_github_learning\\SPHinXsys-learning\\tests\\user_examples\\Yash_3d_FVM_double_mach_reflection\\data\\cleanup-fluent-DESKTOP-2B3UK9C-2264.bat
+
+ +------------------------------------------------------------------+
+ |                    ANSYS Product Improvement                     |
+ |                                                                  |
+ |   ANSYS Product Improvement Program helps improve ANSYS          |
+ |   products. Participating in this program is like filling out a  |
+ |   survey. Without interrupting your work, the software reports   |
+ |   anonymous usage information such as errors, machine and        |
+ |   solver statistics, features used, etc. to ANSYS. We never      |
+ |   use the data to identify or contact you.                       |
+ |   The data does NOT contain:                                     |
+ |   - Any personally identifiable information including names,     |
+ |     IP addresses, file names, part names, etc.                   |
+ |   - Any information about your geometry or design specific       |
+ |     inputs.                                                      |
+ |   You can stop participation at any time. To change your         |
+ |   selection go to Help >> ANSYS Product Improvement Program      |
+ |   in the GUI.                                                    |
+ |   For more information about the ANSYS Privacy Policy, please    |
+ |   check: http://www.ansys.com/privacy                            |
+ |                                                                  |
+ +------------------------------------------------------------------+
+
+Reading journal file E:\software\Softwares_Yash\SPHinXsys_github_learning\SPHinXsys-learning\tests\user_examples\Yash_3d_FVM_double_mach_reflection\data\_read_fluent_case_.jou...
+
+> ;Journal file automatically created by Fluent!
+/file read-case E:/software/Softwares_Yash/SPHinXsys_github_learning/SPHinXsys-learning/tests/user_examples/Yash_3d_FVM_double_mach_reflection/data/double_mach_reflection_3D_Struc.msh
+
+Reading "E:/software/Softwares_Yash/SPHinXsys_github_learning/SPHinXsys-learning/tests/user_examples/Yash_3d_FVM_double_mach_reflection/data/double_mach_reflection_3D_Struc.msh"...
+
+Buffering for file scan...
+
+   11475 nodes.
+    7392 hexahedral cells, zone  9.
+   18224 quadrilateral interior faces, zone 10.
+      98 quadrilateral velocity-inlet faces, zone 11.
+      88 quadrilateral pressure-outlet faces, zone 12.
+     168 quadrilateral wall faces, zone 13.
+     158 quadrilateral wall faces, zone 14.
+    7392 quadrilateral wall faces, zone 15.
+
+Building...
+     mesh
+	auto partitioning mesh by Metis (fast),
+	distributing mesh
+		parts..,
+		faces..,
+		nodes..,
+		cells..,
+        bandwidth reduction using Reverse Cuthill-McKee: 88/89 = 0.988764
+     materials,
+     interface,
+     domains,
+     zones,
+	symm
+	wall
+	top_boundary_inlet
+	outlet
+	velocity_inlet
+	int_solid
+	solid
+     parallel,
+Done.
+
+Preparing mesh for display...
+Done.
+
+> 
+adjoint/                mesh/                   report/
+define/                 parallel/               server/
+display/                plot/                   solve/
+exit                    preferences/            surface/
+file/                   print-license-usage     views/
+
+> 
+adjoint/                mesh/                   report/
+define/                 parallel/               server/
+display/                plot/                   solve/
+exit                    preferences/            surface/
+file/                   print-license-usage     views/
+
+> 
+> /exit y
+(cx-gui-do cx-activate-item "Question*OK")
