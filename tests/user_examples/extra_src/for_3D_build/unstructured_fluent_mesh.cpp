@@ -27,7 +27,6 @@ namespace SPH
         }
         /*--- Read the node data (index is starting from zero) ---*/
         size_t number_of_points(0);
-
         while (getline(mesh_file, text_line))
 
         {
@@ -38,13 +37,11 @@ namespace SPH
             text_line.erase(3);
             string text2(text_line);
             text_line.erase(2);
-            /*if (atoi(text_line.c_str()) == 10 && text1.find("))", 0) != string::npos)*/
-            
-                text1.erase(0, 8);
-                Real last_position = text1.find_last_of(")");
-                text1.erase(last_position - 3);
-                number_of_points = stoi(text1, nullptr, 16);
-                break;
+            text1.erase(0, 8);
+            Real last_position = text1.find_last_of(")");
+            text1.erase(last_position - 3);
+            number_of_points = stoi(text1, nullptr, 16);
+            break;
             }
         };
         
@@ -87,7 +84,7 @@ namespace SPH
                 number_of_elements = stoi(text1, nullptr, 16);
                 break;
             }
-        };
+        }
         cell_lists_.resize(number_of_elements + 1);
         for (std::size_t a = 0; a != number_of_elements + 1; ++a)
         {

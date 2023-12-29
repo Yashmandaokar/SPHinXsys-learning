@@ -7,7 +7,7 @@
 
 #ifndef FVM_3D_Unstruct_OLD_H
 #define FVM_3D_Unstruct_OLD_H
-#include "unstructured_fluent_mesh.h"              // shared eulerian classes for weakly-compressible and compressible fluid in FVM.
+#include "unstructured_mesh.h"              // shared eulerian classes for weakly-compressible and compressible fluid in FVM.
 using namespace SPH;
 using namespace std;
 //----------------------------------------------------------------------
