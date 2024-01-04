@@ -465,7 +465,7 @@ class WaveMaking : public solid_dynamics::BaseMotionConstraint<BodyPartByParticl
         Real time = GlobalStaticVariables::physical_time_;
         pos_[index_i] = pos0_[index_i] + getDisplacement(time);
         vel_[index_i] = getVelocity(time);
-        acc_[index_i] = getAcceleration(time);
+        force_[index_i] = mass_[index_i] * getAcceleration(time);
     };
 };
 
@@ -476,24 +476,3 @@ Real h = 1.3 * particle_spacing_ref;
 Vecd WGaugeDim(0.5 * DW, 0.5 * h, 0.5 * DH);
 Vecd WGauge(0.0, 4., 0.5 * DH);
 Transform translation_WGauge(WGauge);
-
-/**
- * @class FreeSurfaceHeightZ
- * @brief Probe the free surface profile for a fluid body part by reduced operation.
- */
-class FreeSurfaceHeightZ : public BaseLocalDynamicsReduce<Real, ReduceMax, BodyPartByCell>,
-                           public SPH::fluid_dynamics::FluidDataSimple
-{
-  protected:
-    StdLargeVec<Vecd> &pos_;
-
-  public:
-    FreeSurfaceHeightZ(BodyPartByCell &body_part)
-        : BaseLocalDynamicsReduce<Real, ReduceMax, BodyPartByCell>(body_part, Real(MinRealNumber)),
-          SPH::fluid_dynamics::FluidDataSimple(sph_body_), pos_(particles_->pos_)
-    {
-        quantity_name_ = "FreeSurfaceHeight";
-    }
-    virtual ~FreeSurfaceHeightZ(){};
-    Real reduce(size_t index_i, Real dt = 0.0) { return pos_[index_i][2]; };
-};

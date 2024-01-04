@@ -160,8 +160,7 @@ bool ParticleGeneratorNetwork::
 //=================================================================================================//
 void ParticleGeneratorNetwork::initializeGeometricVariables()
 {
-    IOEnvironment *io_environment = sph_body_.getSPHSystem().io_environment_;
-    BodyStatesRecordingToVtp write_states(*io_environment, {sph_body_});
+    BodyStatesRecordingToVtp write_states({sph_body_});
 
     std::cout << "Now creating Particles on network... " << std::endl;
 
@@ -205,7 +204,7 @@ void ParticleGeneratorNetwork::initializeGeometricVariables()
         for (size_t j = 0; j != branches_to_grow.size(); j++)
         {
             size_t grow_id = branches_to_grow[j];
-            Real rand_num = ((Real)rand() / (RAND_MAX)) - 0.5;
+            Real rand_num = rand_uniform(-0.5, 0.5);
             Real angle_to_use = angle_ + rand_num * 0.05;
             for (size_t k = 0; k != 2; k++)
             {

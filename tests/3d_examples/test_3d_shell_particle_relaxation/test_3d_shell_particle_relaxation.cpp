@@ -44,12 +44,12 @@ int main(int ac, char *av[])
     //	Build up a SPHSystem.
     //----------------------------------------------------------------------
     SPHSystem sph_system(system_domain_bounds, dp_0);
-    IOEnvironment io_environment(sph_system);
+    sph_system.handleCommandlineOptions(ac, av)->setIOEnvironment();
     //----------------------------------------------------------------------
     //	Creating body, materials and particles.
     //----------------------------------------------------------------------
     RealBody imported_model(sph_system, makeShared<ImportedShellModel>("ImportedShellModel"));
-    imported_model.defineBodyLevelSetShape(level_set_refinement_ratio)->correctLevelSetSign()->writeLevelSet(io_environment);
+    imported_model.defineBodyLevelSetShape(level_set_refinement_ratio)->correctLevelSetSign()->writeLevelSet(sph_system);
     // here dummy linear elastic solid is use because no solid dynamics in particle relaxation
     imported_model.defineParticlesAndMaterial<ShellParticles, SaintVenantKirchhoffSolid>(1.0, 1.0, 0.0);
     imported_model.generateParticles<ThickSurfaceParticleGeneratorLattice>(thickness);
@@ -57,8 +57,8 @@ int main(int ac, char *av[])
     //----------------------------------------------------------------------
     //	Define simple file input and outputs functions.
     //----------------------------------------------------------------------
-    BodyStatesRecordingToVtp write_imported_model_to_vtp(io_environment, {imported_model});
-    MeshRecordingToPlt write_mesh_cell_linked_list(io_environment, imported_model.getCellLinkedList());
+    BodyStatesRecordingToVtp write_imported_model_to_vtp({imported_model});
+    MeshRecordingToPlt write_mesh_cell_linked_list(sph_system, imported_model.getCellLinkedList());
     //----------------------------------------------------------------------
     //	Define body relation map.
     //	The contact map gives the topological connections between the bodies.
@@ -73,13 +73,13 @@ int main(int ac, char *av[])
     //----------------------------------------------------------------------
     SimpleDynamics<RandomizeParticlePosition> random_imported_model_particles(imported_model);
     /** A  Physics relaxation step. */
-    relax_dynamics::ShellRelaxationStepInner relaxation_step_inner(imported_model_inner, thickness, level_set_refinement_ratio);
+    relax_dynamics::ShellRelaxationStep relaxation_step_inner(imported_model_inner);
     relax_dynamics::ShellNormalDirectionPrediction shell_normal_prediction(imported_model_inner, thickness);
     //----------------------------------------------------------------------
     //	Particle relaxation starts here.
     //----------------------------------------------------------------------
     random_imported_model_particles.exec(0.25);
-    relaxation_step_inner.mid_surface_bounding_.exec();
+    relaxation_step_inner.MidSurfaceBounding().exec();
     write_imported_model_to_vtp.writeToFile(0.0);
     imported_model.updateCellLinkedList();
     write_mesh_cell_linked_list.writeToFile(0.0);
@@ -100,7 +100,6 @@ int main(int ac, char *av[])
     shell_normal_prediction.exec();
     write_imported_model_to_vtp.writeToFile(ite_p);
     std::cout << "The physics relaxation process of imported model finish !" << std::endl;
-
 
     return 0;
 }
