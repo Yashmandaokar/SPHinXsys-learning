@@ -84,7 +84,6 @@ class FluentParticleGeneratorInFVM : public ParticleGenerator
     StdLargeVec<Real> elements_volumes_;
 };
 
-
 /*
  * @class BaseGhostCreation
  * @brief Base class for the ghost particle*/

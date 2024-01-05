@@ -69,22 +69,6 @@ class readMeshFile_3d
     double min_distance_between_nodes_;
 };
 
-
-class BaseInnerRelationInFVM : public BaseInnerRelation
-{
-  protected:
-    virtual void resetNeighborhoodCurrentSize();
-
-  public:
-    RealBody *real_body_;
-    vector<vector<vector<size_t>>> all_needed_data_from_mesh_file_;
-    vector<vector<Real>> nodes_coordinates_;
-    explicit BaseInnerRelationInFVM(RealBody &real_body, vector<vector<vector<size_t>>> data_inpute, vector<vector<Real>> nodes_coordinates);
-    virtual ~BaseInnerRelationInFVM(){};
-
-    virtual void resizeConfiguration() override;
-};
-
 class ParticleGeneratorInFVM : public ParticleGenerator
 {
   public:
@@ -99,72 +83,6 @@ class ParticleGeneratorInFVM : public ParticleGenerator
     StdLargeVec<Vecd> elements_center_coordinates_;
     StdLargeVec<Real> elements_volumes_;
 };
-
-/**
- * @class NeighborBuilderInFVM
- * @brief Base neighbor relation between particles i and j.
- */
-class NeighborBuilderInFVM
-{
-  protected:
-    Kernel *kernel_;
-    //----------------------------------------------------------------------
-    //	Below are for constant smoothing length.
-    //----------------------------------------------------------------------
-    void createRelation(Neighborhood &neighborhood, Real &distance, Real &dW_ijV_j, Vecd &interface_normal_direction, size_t j_index) const;
-    void initializeRelation(Neighborhood &neighborhood, Real &distance, Real &dW_ijV_j,
-                            Vecd &interface_normal_direction, size_t j_index) const;
-
-  public:
-    NeighborBuilderInFVM() : kernel_(nullptr){};
-    virtual ~NeighborBuilderInFVM(){};
-};
-
-/**
- * @class NeighborBuilderInnerInFVM
- * @brief A inner neighbor builder functor in FVM.
- */
-class NeighborBuilderInnerInFVM : public NeighborBuilderInFVM
-{
-  public:
-    explicit NeighborBuilderInnerInFVM(SPHBody *body) : NeighborBuilderInFVM(){};
-    void operator()(Neighborhood &neighborhood, Real &distance,
-                    Real &dW_ijV_j, Vecd &interface_normal_direction, size_t j_index) const
-    {
-        neighborhood.current_size_ >= neighborhood.allocated_size_
-            ? createRelation(neighborhood, distance, dW_ijV_j, interface_normal_direction, j_index)
-            : initializeRelation(neighborhood, distance, dW_ijV_j, interface_normal_direction, j_index);
-        neighborhood.current_size_++;
-    };
-};
-
-/** a small functor for obtaining particle index for container index */
-struct SPHBodyParticlesIndex
-{
-    size_t operator()(size_t particle_index) const { return particle_index; };
-};
-
-/**
- * @class InnerRelationInFVM
- * @brief The first concrete relation within a SPH body
- */
-class InnerRelationInFVM : public BaseInnerRelationInFVM
-{
-  protected:
-    SPHBodyParticlesIndex get_particle_index_;
-    NeighborBuilderInnerInFVM get_inner_neighbor_;
-
-  public:
-    explicit InnerRelationInFVM(RealBody &real_body, vector<vector<vector<size_t>>> data_inpute, vector<vector<Real>> nodes_coordinates);
-    virtual ~InnerRelationInFVM(){};
-
-    /** generalized particle search algorithm */
-    template <typename GetParticleIndex, typename GetNeighborRelation>
-    void searchNeighborsByParticles(size_t total_real_particles, BaseParticles &source_particles,
-                                    ParticleConfiguration &particle_configuration, GetParticleIndex &get_particle_index, GetNeighborRelation &get_neighbor_relation);
-    virtual void updateConfiguration() override;
-};
-
 
 /**
  * @class BaseGhostCreation
@@ -233,7 +151,7 @@ class GhostCreationFromMesh : public GeneralDataDelegateSimple
                     std::vector<size_t> sub_element1 = {index_i + 1, boundary_type, node1_index, node2_index, node3_index};
                     new_element.push_back(sub_element1);
 
-                    // Add (correspon ding_index_i,boundary_type,node1_index,node2_index) to the new element
+                    // Add (corresponding_index_i,boundary_type,node1_index,node2_index) to the new element
                     std::vector<size_t> sub_element2 = {index_i + 1, boundary_type, node1_index, node2_index, node3_index};
                     new_element.push_back(sub_element2);
 
