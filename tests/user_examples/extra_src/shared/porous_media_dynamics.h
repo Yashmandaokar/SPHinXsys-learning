@@ -57,7 +57,7 @@ namespace multi_species_continuum
 			Real smoothing_length_;
 		public:
 			explicit GetSaturationTimeStepSize(SPHBody &sph_body):
-				LocalDynamicsReduce<Real, ReduceMin>(sph_body, MaxReal), 
+				LocalDynamicsReduce<Real, ReduceMin>(sph_body, Real(MaxRealNumber)), 
 				PorousMediaSolidDataSimple(sph_body)
 			{ 
 				smoothing_length_ = sph_body.sph_adaptation_->ReferenceSmoothingLength();

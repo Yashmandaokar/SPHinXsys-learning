@@ -74,15 +74,16 @@ int main(int ac, char *av[])
     SPHSystem sph_system(system_domain_bounds, resolution_ref);
     sph_system.setRunParticleRelaxation(false);
     sph_system.setReloadParticles(false);
-    sph_system.handleCommandlineOptions(ac, av)->setIOEnvironment();
+    sph_system.handleCommandlineOptions(ac, av);
+    IOEnvironment io_environment(sph_system);
     //----------------------------------------------------------------------
     //	Creating bodies with corresponding materials and particles.
     //----------------------------------------------------------------------
     RealBody soil_block(sph_system, makeShared<SoilBlock>("GranularBody"));
-    soil_block.defineBodyLevelSetShape()->writeLevelSet(sph_system);
+    soil_block.defineBodyLevelSetShape()->writeLevelSet(io_environment);
     soil_block.defineParticlesAndMaterial<PlasticContinuumParticles, PlasticContinuum>(rho0_s, c_s, Youngs_modulus, poisson, friction_angle);
     (!sph_system.RunParticleRelaxation() && sph_system.ReloadParticles())
-        ? soil_block.generateParticles<ParticleGeneratorReload>(soil_block.getName())
+        ? soil_block.generateParticles<ParticleGeneratorReload>(io_environment, soil_block.getName())
         : soil_block.generateParticles<ParticleGeneratorLattice>();
     soil_block.addBodyStateForRecording<Real>("Pressure");
     soil_block.addBodyStateForRecording<Real>("Density");
@@ -101,14 +102,8 @@ int main(int ac, char *av[])
     //  At last, we define the complex relaxations by combining previous defined
     //  inner and contact relations.
     //----------------------------------------------------------------------
-    InnerRelation soil_block_inner(soil_block);
-    ContactRelation soil_block_contact(soil_block, {&wall_boundary});
-    //----------------------------------------------------------------------
-    // Combined relations built from basic relations
-    // which is only used for update configuration.
-    //----------------------------------------------------------------------
-    ComplexRelation soil_block_complex(soil_block_inner, soil_block_contact);
-    BodyStatesRecordingToVtp body_states_recording(sph_system.real_bodies_);
+    ComplexRelation soil_block_complex(soil_block, {&wall_boundary});
+    BodyStatesRecordingToVtp body_states_recording(io_environment, sph_system.real_bodies_);
     // run particle relaxation
     if (sph_system.RunParticleRelaxation())
     {
@@ -118,12 +113,12 @@ int main(int ac, char *av[])
         /** Random reset the insert body particle position. */
         SimpleDynamics<RandomizeParticlePosition> random_column_particles(soil_block);
         /** Write the body state to Vtp file. */
-        BodyStatesRecordingToVtp write_column_to_vtp(soil_block);
+        BodyStatesRecordingToVtp write_column_to_vtp(io_environment, soil_block);
         /** Write the particle reload files. */
 
-        ReloadParticleIO write_particle_reload_files(soil_block);
+        ReloadParticleIO write_particle_reload_files(io_environment, soil_block);
         /** A  Physics relaxation step. */
-        relax_dynamics::RelaxationStepInner relaxation_step_inner(soil_block_inner);
+        relax_dynamics::RelaxationStepInner relaxation_step_inner(soil_block_complex.getInnerRelation());
         /**
          * @brief 	Particle relaxation starts here.
          */
@@ -157,17 +152,17 @@ int main(int ac, char *av[])
     SimpleDynamics<NormalDirectionFromBodyShape> wall_boundary_normal_direction(wall_boundary);
     SimpleDynamics<TimeStepInitialization> soil_step_initialization(soil_block, gravity_ptr);
     ReduceDynamics<fluid_dynamics::AcousticTimeStepSize> soil_acoustic_time_step(soil_block, 0.1);
-    InteractionWithUpdate<fluid_dynamics::DensitySummationComplexFreeSurface> soil_density_by_summation(soil_block_inner, soil_block_contact);
-    InteractionDynamics<continuum_dynamics::StressDiffusion> stress_diffusion(soil_block_inner);
-    Dynamics1Level<continuum_dynamics::StressRelaxation1stHalfRiemannWithWall> granular_stress_relaxation_1st(soil_block_inner, soil_block_contact);
-    Dynamics1Level<continuum_dynamics::StressRelaxation2ndHalfRiemannWithWall> granular_stress_relaxation_2nd(soil_block_inner, soil_block_contact);
+    InteractionWithUpdate<fluid_dynamics::DensitySummationFreeSurfaceComplex> soil_density_by_summation(soil_block_complex);
+    InteractionDynamics<continuum_dynamics::StressDiffusion> stress_diffusion(soil_block_complex.getInnerRelation());
+    Dynamics1Level<continuum_dynamics::StressRelaxation1stHalfRiemannWithWall> granular_stress_relaxation_1st(soil_block_complex);
+    Dynamics1Level<continuum_dynamics::StressRelaxation2ndHalfRiemannWithWall> granular_stress_relaxation_2nd(soil_block_complex);
     //----------------------------------------------------------------------
     //	Define the methods for I/O operations, observations
     //	and regression tests of the simulation.
     //----------------------------------------------------------------------
-    RestartIO restart_io(sph_system.real_bodies_);
-    RegressionTestDynamicTimeWarping<ReducedQuantityRecording<TotalMechanicalEnergy>>
-        write_soil_mechanical_energy(soil_block, gravity_ptr);
+    RestartIO restart_io(io_environment, sph_system.real_bodies_);
+    RegressionTestDynamicTimeWarping<ReducedQuantityRecording<ReduceDynamics<TotalMechanicalEnergy>>>
+        write_soil_mechanical_energy(io_environment, soil_block, gravity_ptr);
     //----------------------------------------------------------------------
     //	Prepare the simulation with cell linked list, configuration
     //	and case specified initial condition if necessary.

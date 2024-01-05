@@ -29,7 +29,7 @@
 #ifndef GENERAL_INTERPOLATION_H
 #define GENERAL_INTERPOLATION_H
 
-#include "base_general_dynamics.h"
+#include "general_dynamics.h"
 
 namespace SPH
 {
@@ -43,6 +43,8 @@ template <typename DataType>
 class BaseInterpolation : public LocalDynamics, public InterpolationContactData
 {
   public:
+    StdLargeVec<DataType> *interpolated_quantities_;
+
     explicit BaseInterpolation(BaseContactRelation &contact_relation, const std::string &variable_name)
         : LocalDynamics(contact_relation.getSPHBody()), InterpolationContactData(contact_relation),
           interpolated_quantities_(nullptr)
@@ -80,7 +82,6 @@ class BaseInterpolation : public LocalDynamics, public InterpolationContactData
     };
 
   protected:
-    StdLargeVec<DataType> *interpolated_quantities_;
     StdVec<StdLargeVec<Real> *> contact_Vol_;
     StdVec<StdLargeVec<DataType> *> contact_data_;
 };

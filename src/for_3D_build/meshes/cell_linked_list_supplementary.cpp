@@ -82,8 +82,8 @@ void CellLinkedList ::InsertListDataEntry(size_t particle_index,
 //=================================================================================================//
 ListData CellLinkedList::findNearestListDataEntry(const Vecd &position)
 {
-    Real min_distance_sqr = MaxReal;
-    ListData nearest_entry = std::make_tuple(MaxSize_t, MaxReal * Vecd::Ones(), MaxReal);
+    Real min_distance_sqr = Infinity;
+    ListData nearest_entry = std::make_tuple(MaxSize_t, Infinity * Vecd::Ones(), Infinity);
 
     Array3i cell = CellIndexFromPosition(position);
     mesh_for_each(
@@ -131,8 +131,8 @@ void CellLinkedList::
 void CellLinkedList::
     tagBoundingCells(StdVec<CellLists> &cell_data_lists, BoundingBox &bounding_bounds, int axis)
 {
-    int second_axis = NextAxis(axis);
-    int third_axis = NextNextAxis(axis);
+    int second_axis = SecondAxis(axis);
+    int third_axis = ThirdAxis(axis);
     Array3i body_lower_bound_cell_ = CellIndexFromPosition(bounding_bounds.first_);
     Array3i body_upper_bound_cell_ = CellIndexFromPosition(bounding_bounds.second_);
 

@@ -28,7 +28,7 @@
 
 #pragma once
 
-#include "base_general_dynamics.h"
+#include "general_dynamics.h"
 
 namespace SPH
 {

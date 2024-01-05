@@ -84,7 +84,8 @@ int main(int ac, char *av[])
     sph_system.setRunParticleRelaxation(false);
     /** Tag for starting with relaxed body-fitted particles distribution */
     sph_system.setReloadParticles(false);
-    sph_system.handleCommandlineOptions(ac, av)->setIOEnvironment();
+    sph_system.handleCommandlineOptions(ac, av);
+    IOEnvironment io_environment(sph_system);
     //----------------------------------------------------------------------
     //	Creating body, materials and particles.
     //----------------------------------------------------------------------
@@ -92,14 +93,14 @@ int main(int ac, char *av[])
     free_ball.defineBodyLevelSetShape();
     free_ball.defineParticlesAndMaterial<ElasticSolidParticles, NeoHookeanSolid>(rho0_s, Youngs_modulus, poisson);
     (!sph_system.RunParticleRelaxation() && sph_system.ReloadParticles())
-        ? free_ball.generateParticles<ParticleGeneratorReload>(free_ball.getName())
+        ? free_ball.generateParticles<ParticleGeneratorReload>(io_environment, free_ball.getName())
         : free_ball.generateParticles<ParticleGeneratorLattice>();
 
     SolidBody damping_ball(sph_system, makeShared<DampingBall>("DampingBall"));
     damping_ball.defineBodyLevelSetShape();
     damping_ball.defineParticlesAndMaterial<ElasticSolidParticles, NeoHookeanSolid>(rho0_s, Youngs_modulus, poisson);
     (!sph_system.RunParticleRelaxation() && sph_system.ReloadParticles())
-        ? damping_ball.generateParticles<ParticleGeneratorReload>(damping_ball.getName())
+        ? damping_ball.generateParticles<ParticleGeneratorReload>(io_environment, damping_ball.getName())
         : damping_ball.generateParticles<ParticleGeneratorLattice>();
 
     SolidBody wall_boundary(sph_system, makeShared<WallBoundary>("WallBoundary"));
@@ -125,13 +126,13 @@ int main(int ac, char *av[])
         //----------------------------------------------------------------------
         SimpleDynamics<RandomizeParticlePosition> free_ball_random_particles(free_ball);
         SimpleDynamics<RandomizeParticlePosition> damping_ball_random_particles(damping_ball);
-        relax_dynamics::RelaxationStepInner free_ball_relaxation_step(free_ball_inner);
-        relax_dynamics::RelaxationStepInner damping_ball_relaxation_step(damping_ball_inner);
+        relax_dynamics::RelaxationStepInner free_ball_relaxation_step_inner(free_ball_inner);
+        relax_dynamics::RelaxationStepInner damping_ball_relaxation_step_inner(damping_ball_inner);
         //----------------------------------------------------------------------
         //	Output for particle relaxation.
         //----------------------------------------------------------------------
-        BodyStatesRecordingToVtp write_ball_state(sph_system.real_bodies_);
-        ReloadParticleIO write_particle_reload_files({&free_ball, &damping_ball});
+        BodyStatesRecordingToVtp write_ball_state(io_environment, sph_system.real_bodies_);
+        ReloadParticleIO write_particle_reload_files(io_environment, {&free_ball, &damping_ball});
         //----------------------------------------------------------------------
         //	Particle relaxation starts here.
         //----------------------------------------------------------------------
@@ -145,8 +146,8 @@ int main(int ac, char *av[])
         int relax_step = 1000;
         while (ite < relax_step)
         {
-            free_ball_relaxation_step.exec();
-            damping_ball_relaxation_step.exec();
+            free_ball_relaxation_step_inner.exec();
+            damping_ball_relaxation_step_inner.exec();
             ite += 1;
             if (ite % 100 == 0)
             {
@@ -199,11 +200,11 @@ int main(int ac, char *av[])
     //----------------------------------------------------------------------
     //	Define the methods for I/O operations and observations of the simulation.
     //----------------------------------------------------------------------
-    BodyStatesRecordingToVtp body_states_recording(sph_system.real_bodies_);
+    BodyStatesRecordingToVtp body_states_recording(io_environment, sph_system.real_bodies_);
     RegressionTestDynamicTimeWarping<ObservedQuantityRecording<Vecd>>
-        free_ball_displacement_recording("Position", free_ball_observer_contact);
+        free_ball_displacement_recording("Position", io_environment, free_ball_observer_contact);
     RegressionTestDynamicTimeWarping<ObservedQuantityRecording<Vecd>>
-        damping_ball_displacement_recording("Position", damping_all_observer_contact);
+        damping_ball_displacement_recording("Position", io_environment, damping_all_observer_contact);
     //----------------------------------------------------------------------
     //	Prepare the simulation with cell linked list, configuration
     //	and case specified initial condition if necessary.
@@ -215,7 +216,7 @@ int main(int ac, char *av[])
     //----------------------------------------------------------------------
     //	Initial states output.
     //----------------------------------------------------------------------
-    body_states_recording.writeToFile();
+    body_states_recording.writeToFile(0);
     free_ball_displacement_recording.writeToFile(0);
     damping_ball_displacement_recording.writeToFile(0);
     //----------------------------------------------------------------------

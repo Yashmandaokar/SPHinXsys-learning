@@ -7,9 +7,9 @@ namespace SPH
 {
 //=============================================================================================//
 template <class MuscleType>
-template <typename... Args>
-ActiveMuscle<MuscleType>::ActiveMuscle(Args &&...args)
-    : MuscleType(std::forward<Args>(args)...)
+template <typename... ConstructorArgs>
+ActiveMuscle<MuscleType>::ActiveMuscle(ConstructorArgs &&...args)
+    : MuscleType(std::forward<ConstructorArgs>(args)...)
 {
     MuscleType::material_type_name_ = "ActiveMuscle";
 }

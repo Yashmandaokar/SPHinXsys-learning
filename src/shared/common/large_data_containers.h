@@ -21,12 +21,12 @@
  *                                                                           *
  * ------------------------------------------------------------------------- */
 /**
- * @file 	large_data_containers.h
+ * @file 	large_data-container.h
  * @brief 	Data container for large vector, e.g. particle data.
  * @author	Chi Zhang and Xiangyu Hu
  */
-#ifndef LARGE_DATA_CONTAINERS_H
-#define LARGE_DATA_CONTAINERS_H
+#ifndef LARGE_DATA_CONTAINER_H
+#define LARGE_DATA_CONTAINER_H
 
 #include "tbb/blocked_range.h"
 #include "tbb/blocked_range2d.h"
@@ -38,6 +38,8 @@
 #include "tbb/parallel_reduce.h"
 #include "tbb/scalable_allocator.h"
 #include "tbb/tick_count.h"
+
+#include <array>
 
 namespace SPH
 {
@@ -66,4 +68,4 @@ template <typename T>
 using TriVector = std::vector<std::vector<std::vector<T>>>;
 } // namespace SPH
 
-#endif // LARGE_DATA_CONTAINERS_H
+#endif // LARGE_DATA_CONTAINER_H

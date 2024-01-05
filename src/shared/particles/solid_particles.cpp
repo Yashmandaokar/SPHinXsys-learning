@@ -42,7 +42,7 @@ void ElasticSolidParticles::initializeOtherVariables()
      *	register FSI data
      */
     registerVariable(vel_ave_, "AverageVelocity");
-    registerVariable(force_ave_, "AverageForce");
+    registerVariable(acc_ave_, "AverageAcceleration");
     /**
      *	add restart output particle data
      */
@@ -304,7 +304,7 @@ void ShellParticles::initializeOtherVariables()
      * for FSI
      */
     registerVariable(vel_ave_, "AverageVelocity");
-    registerVariable(force_ave_, "AverageForce");
+    registerVariable(acc_ave_, "AverageAcceleration");
     /**
      * for rotation.
      */

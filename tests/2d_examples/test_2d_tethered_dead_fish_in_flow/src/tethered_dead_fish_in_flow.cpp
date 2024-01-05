@@ -187,7 +187,10 @@ struct InflowVelocity
         Vecd target_velocity = velocity;
         Real run_time = GlobalStaticVariables::physical_time_;
         Real u_ave = run_time < t_ref_ ? 0.5 * u_ref_ * (1.0 - cos(Pi * run_time / t_ref_)) : u_ref_;
-        target_velocity[0] = 1.5 * u_ave * SMAX(0.0, 1.0 - position[1] * position[1] / halfsize_[1] / halfsize_[1]);
+        if (aligned_box_.checkInBounds(0, position))
+        {
+            target_velocity[0] = 1.5 * u_ave * (1.0 - position[1] * position[1] / halfsize_[1] / halfsize_[1]);
+        }
         return target_velocity;
     }
 };
@@ -228,7 +231,7 @@ int main(int ac, char *av[])
     fish_body.defineParticlesAndMaterial<ElasticSolidParticles, NeoHookeanSolid>(rho0_s, Youngs_modulus, poisson);
     // Using relaxed particle distribution if needed
     (!system.RunParticleRelaxation() && system.ReloadParticles())
-        ? fish_body.generateParticles<ParticleGeneratorReload>(fish_body.getName())
+        ? fish_body.generateParticles<ParticleGeneratorReload>(io_environment, fish_body.getName())
         : fish_body.generateParticles<ParticleGeneratorLattice>();
     /**
      * @brief   Particle and body creation of fish observer.
@@ -238,14 +241,10 @@ int main(int ac, char *av[])
     /** topology */
     InnerRelation water_block_inner(water_block);
     InnerRelation fish_body_inner(fish_body);
-    ContactRelation water_block_contact(water_block, {&wall_boundary, &fish_body});
+    ComplexRelation water_block_complex(water_block_inner, {&wall_boundary, &fish_body});
     ContactRelation fish_body_contact(fish_body, {&water_block});
     ContactRelation fish_observer_contact(fish_observer, {&fish_body});
-    //----------------------------------------------------------------------
-    // Combined relations built from basic relations
-    // which is only used for update configuration.
-    //----------------------------------------------------------------------
-    ComplexRelation water_block_complex(water_block_inner, water_block_contact);
+
     /** check whether run particle relaxation for body fitted particle distribution. */
     if (system.RunParticleRelaxation())
     {
@@ -255,9 +254,9 @@ int main(int ac, char *av[])
         /** Random reset the insert body particle position. */
         SimpleDynamics<RandomizeParticlePosition> random_fish_body_particles(fish_body);
         /** Write the body state to Vtp file. */
-        BodyStatesRecordingToVtp write_fish_body(fish_body);
+        BodyStatesRecordingToVtp write_fish_body(io_environment, fish_body);
         /** Write the particle reload files. */
-        ReloadParticleIO write_particle_reload_files({&fish_body});
+        ReloadParticleIO write_particle_reload_files(io_environment, {&fish_body});
 
         /** A  Physics relaxation step. */
         relax_dynamics::RelaxationStepInner relaxation_step_inner(fish_body_inner);
@@ -305,18 +304,18 @@ int main(int ac, char *av[])
      */
     SimpleDynamics<TimeStepInitialization> initialize_a_fluid_step(water_block);
     /** Evaluation of density by summation approach. */
-    InteractionWithUpdate<fluid_dynamics::DensitySummationComplex> update_density_by_summation(water_block_inner, water_block_contact);
+    InteractionWithUpdate<fluid_dynamics::DensitySummationComplex> update_density_by_summation(water_block_complex);
     /** Time step size without considering sound wave speed. */
     ReduceDynamics<fluid_dynamics::AdvectionTimeStepSize> get_fluid_advection_time_step_size(water_block, U_f);
     /** Time step size with considering sound wave speed. */
     ReduceDynamics<fluid_dynamics::AcousticTimeStepSize> get_fluid_time_step_size(water_block);
     /** Pressure relaxation using verlet time stepping. */
-    Dynamics1Level<fluid_dynamics::Integration1stHalfWithWallRiemann> pressure_relaxation(water_block_inner, water_block_contact);
-    Dynamics1Level<fluid_dynamics::Integration2ndHalfWithWallNoRiemann> density_relaxation(water_block_inner, water_block_contact);
+    Dynamics1Level<fluid_dynamics::Integration1stHalfRiemannWithWall> pressure_relaxation(water_block_complex);
+    Dynamics1Level<fluid_dynamics::Integration2ndHalfWithWall> density_relaxation(water_block_complex);
     /** Computing viscous acceleration. */
-    InteractionDynamics<fluid_dynamics::ViscousAccelerationWithWall> viscous_acceleration(water_block_inner, water_block_contact);
+    InteractionDynamics<fluid_dynamics::ViscousAccelerationWithWall> viscous_acceleration(water_block_complex);
     /** Impose transport velocity formulation. */
-    InteractionWithUpdate<fluid_dynamics::TransportVelocityCorrectionComplex<AllParticles>> transport_velocity_correction(water_block_inner, water_block_contact);
+    InteractionDynamics<fluid_dynamics::TransportVelocityCorrectionComplex<AllParticles>> transport_velocity_correction(water_block_complex);
     /** Computing vorticity in the flow. */
     InteractionDynamics<fluid_dynamics::VorticityInner> compute_vorticity(water_block_inner);
     /** Inflow boundary condition. */
@@ -402,10 +401,10 @@ int main(int ac, char *av[])
     SimpleDynamics<solid_dynamics::ConstraintBodyPartBySimBody>
         constraint_tethered_spot(fish_head, MBsystem, tethered_spot, integ);
 
-    BodyStatesRecordingToVtp write_real_body_states(system.real_bodies_);
-    ReducedQuantityRecording<solid_dynamics::TotalForceFromFluid>
-        write_total_force_on_fish(fluid_force_on_fish_body, "TotalPressureForceOnSolid");
-    ObservedQuantityRecording<Vecd> write_fish_displacement("Position", fish_observer_contact);
+    BodyStatesRecordingToVtp write_real_body_states(io_environment, system.real_bodies_);
+    ReducedQuantityRecording<ReduceDynamics<solid_dynamics::TotalForceFromFluid>>
+        write_total_force_on_fish(io_environment, fluid_force_on_fish_body, "TotalPressureForceOnSolid");
+    ObservedQuantityRecording<Vecd> write_fish_displacement("Position", io_environment, fish_observer_contact);
     /**
      * Time steeping starts here.
      */

@@ -87,10 +87,9 @@ class NeighborBuilder
                         const Vecd &displacement, size_t j_index, const Real &Vol_j, Real i_h_ratio, Real h_ratio_min);
     void initializeNeighbor(Neighborhood &neighborhood, const Real &distance,
                             const Vecd &displacement, size_t j_index, const Real &Vol_j, Real i_h_ratio, Real h_ratio_min);
-    Kernel *chooseKernel(SPHBody &body, SPHBody &target_body);
 
   public:
-    NeighborBuilder(Kernel *kernel) : kernel_(kernel){};
+    NeighborBuilder() : kernel_(nullptr){};
     virtual ~NeighborBuilder(){};
 };
 

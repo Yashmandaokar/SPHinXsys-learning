@@ -85,8 +85,9 @@ int main(int ac, char *av[])
     /** Tag for running particle relaxation for the initially body-fitted distribution */
     sph_system.setRunParticleRelaxation(false);
     /** Tag for starting with relaxed body-fitted particles distribution */
-    sph_system.setReloadParticles(true);
-    sph_system.handleCommandlineOptions(ac, av)->setIOEnvironment();
+    sph_system.setReloadParticles(false);
+    sph_system.handleCommandlineOptions(ac, av);
+    IOEnvironment io_environment(sph_system);
     //----------------------------------------------------------------------
     //	Creating body, materials and particles.
     //----------------------------------------------------------------------
@@ -96,11 +97,11 @@ int main(int ac, char *av[])
     shell.defineParticlesAndMaterial<ShellParticles, SaintVenantKirchhoffSolid>(1.0, 1.0, 0.0);
     if (!sph_system.RunParticleRelaxation() && sph_system.ReloadParticles())
     {
-        shell.generateParticles<ParticleGeneratorReload>(shell.getName());
+        shell.generateParticles<ParticleGeneratorReload>(io_environment, shell.getName());
     }
     else
     {
-        shell.defineBodyLevelSetShape(level_set_refinement_ratio)->writeLevelSet(sph_system);
+        shell.defineBodyLevelSetShape(level_set_refinement_ratio)->writeLevelSet(io_environment);
         shell.generateParticles<ThickSurfaceParticleGeneratorLattice>(thickness);
     }
 
@@ -137,21 +138,22 @@ int main(int ac, char *av[])
         //	Define the methods for particle relaxation for wall boundary.
         //----------------------------------------------------------------------
         SimpleDynamics<RandomizeParticlePosition> shell_random_particles(shell);
-        relax_dynamics::ShellRelaxationStep relaxation_step_shell_inner(shell_inner);
+        relax_dynamics::ShellRelaxationStepInner
+            relaxation_step_shell_inner(shell_inner, thickness, level_set_refinement_ratio);
         relax_dynamics::ShellNormalDirectionPrediction shell_normal_prediction(shell_inner, thickness, cos(Pi / 3.75));
         shell.addBodyStateForRecording<int>("UpdatedIndicator");
         //----------------------------------------------------------------------
         //	Output for particle relaxation.
         //----------------------------------------------------------------------
-        BodyStatesRecordingToVtp write_relaxed_particles(sph_system.real_bodies_);
-        MeshRecordingToPlt write_mesh_cell_linked_list(sph_system, shell.getCellLinkedList());
-        ReloadParticleIO write_particle_reload_files({&shell});
+        BodyStatesRecordingToVtp write_relaxed_particles(io_environment, sph_system.real_bodies_);
+        MeshRecordingToPlt write_mesh_cell_linked_list(io_environment, shell.getCellLinkedList());
+        ReloadParticleIO write_particle_reload_files(io_environment, {&shell});
         //----------------------------------------------------------------------
         //	Particle relaxation starts here.
         //----------------------------------------------------------------------
         shell_random_particles.exec(0.25);
 
-        relaxation_step_shell_inner.MidSurfaceBounding().exec();
+        relaxation_step_shell_inner.mid_surface_bounding_.exec();
         write_relaxed_particles.writeToFile(0);
         shell.updateCellLinkedList();
         write_mesh_cell_linked_list.writeToFile(0);
@@ -200,7 +202,7 @@ int main(int ac, char *av[])
     //----------------------------------------------------------------------
     //	Define the methods for I/O operations and observations of the simulation.
     //----------------------------------------------------------------------
-    BodyStatesRecordingToVtp body_states_recording(sph_system.real_bodies_);
+    BodyStatesRecordingToVtp body_states_recording(io_environment, sph_system.real_bodies_);
     //----------------------------------------------------------------------
     /**
      * The multi body system from simbody.

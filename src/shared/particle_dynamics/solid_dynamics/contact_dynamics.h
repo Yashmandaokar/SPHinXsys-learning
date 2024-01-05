@@ -187,13 +187,13 @@ class SelfContactForce : public LocalDynamics, public SolidDataInner
             // force to mimic pressure
             force -= 2.0 * (p_star + impedance_p) * e_ij * Vol_i * inner_neighborhood.dW_ijV_j_[n];
         }
-        force_prior_[index_i] += force;
+        acc_prior_[index_i] += force / mass_[index_i];
     };
 
   protected:
     Solid &solid_;
     StdLargeVec<Real> &mass_, &self_contact_density_, &Vol_;
-    StdLargeVec<Vecd> &force_prior_, &vel_;
+    StdLargeVec<Vecd> &acc_prior_, &vel_;
     Real contact_impedance_;
 };
 
@@ -229,13 +229,13 @@ class ContactForce : public LocalDynamics, public ContactDynamicsData
                 force -= 2.0 * p_star * e_ij * Vol_i * contact_neighborhood.dW_ijV_j_[n];
             }
         }
-        force_prior_[index_i] += force;
+        acc_prior_[index_i] += force / mass_[index_i];
     };
 
   protected:
     Solid &solid_;
     StdLargeVec<Real> &contact_density_, &Vol_, &mass_;
-    StdLargeVec<Vecd> &force_prior_;
+    StdLargeVec<Vecd> &acc_prior_;
     StdVec<Solid *> contact_solids_;
     StdVec<StdLargeVec<Real> *> contact_contact_density_;
 };
@@ -269,13 +269,13 @@ class ContactForceFromWall : public LocalDynamics, public ContactWithWallData
                 force -= 2.0 * p_i * e_ij * Vol_i * contact_neighborhood.dW_ijV_j_[n];
             }
         }
-        force_prior_[index_i] += force;
+        acc_prior_[index_i] += force / mass_[index_i];
     };
 
   protected:
     Solid &solid_;
     StdLargeVec<Real> &contact_density_, &Vol_, &mass_;
-    StdLargeVec<Vecd> &force_prior_;
+    StdLargeVec<Vecd> &acc_prior_;
 };
 
 /**
@@ -309,12 +309,12 @@ class ContactForceToWall : public LocalDynamics, public ContactDynamicsData
                 force -= 2.0 * p_star * e_ij * Vol_i * contact_neighborhood.dW_ijV_j_[n];
             }
         }
-        force_prior_[index_i] += force;
+        acc_prior_[index_i] += force / mass_[index_i];
     };
 
   protected:
     StdLargeVec<Real> &Vol_, &mass_;
-    StdLargeVec<Vecd> &force_prior_;
+    StdLargeVec<Vecd> &acc_prior_;
     StdVec<Solid *> contact_solids_;
     StdVec<StdLargeVec<Real> *> contact_contact_density_;
 };
@@ -430,13 +430,13 @@ class DynamicContactForceWithWall : public LocalDynamics, public ContactDynamics
             }
         }
 
-        force_prior_[index_i] += force;
+        acc_prior_[index_i] += force / mass_[index_i];
     };
 
   protected:
     Solid &solid_;
     StdLargeVec<Real> &Vol_, &mass_;
-    StdLargeVec<Vecd> &vel_, &force_prior_;
+    StdLargeVec<Vecd> &vel_, &acc_prior_;
     StdVec<StdLargeVec<Vecd> *> contact_vel_, contact_n_;
     Real penalty_strength_;
     Real impedance_, reference_pressure_;

@@ -39,6 +39,7 @@ namespace SPH
 
 class SPHBody;
 class BaseParticles;
+class IOEnvironment;
 
 /**
  * @class LineParticleGenerator

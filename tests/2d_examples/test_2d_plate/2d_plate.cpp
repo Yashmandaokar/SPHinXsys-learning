@@ -90,7 +90,7 @@ int main(int ac, char *av[])
     SolidBody plate_body(sph_system, makeShared<DefaultShape>("PlateBody"));
     plate_body.defineParticlesAndMaterial<ShellParticles, SaintVenantKirchhoffSolid>(rho0_s, Youngs_modulus, poisson);
     plate_body.generateParticles<PlateParticleGenerator>();
-    plate_body.addBodyStateForRecording<Vecd>("PriorForce");
+    plate_body.addBodyStateForRecording<Vecd>("PriorAcceleration");
 
     ObserverBody plate_observer(sph_system, "PlateObserver");
     plate_observer.generateParticles<ObserverParticleGenerator>(observation_location);
@@ -127,9 +127,9 @@ int main(int ac, char *av[])
     //	Define the methods for I/O operations and observations of the simulation.
     //----------------------------------------------------------------------
     IOEnvironment io_environment(sph_system);
-    BodyStatesRecordingToVtp write_states(sph_system.real_bodies_);
+    BodyStatesRecordingToVtp write_states(io_environment, sph_system.real_bodies_);
     RegressionTestDynamicTimeWarping<ObservedQuantityRecording<Vecd>>
-        write_plate_max_displacement("Position", plate_observer_contact); // TODO: using ensemble better
+        write_plate_max_displacement("Position", io_environment, plate_observer_contact); // TODO: using ensemble better
     //----------------------------------------------------------------------
     //	Prepare the simulation with cell linked list, configuration
     //	and case specified initial condition if necessary.

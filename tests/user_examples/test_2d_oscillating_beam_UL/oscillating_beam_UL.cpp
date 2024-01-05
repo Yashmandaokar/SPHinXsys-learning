@@ -143,12 +143,12 @@ int main(int ac, char *av[])
     SimpleDynamics<BeamInitialCondition> beam_initial_velocity(beam_body);
     SharedPtr<Gravity> gravity_ptr = makeShared<Gravity>(Vecd(0.0, -gravity_g));
     Dynamics1Level<continuum_dynamics::Integration1stHalf> beam_pressure_relaxation(beam_body_inner);
-    Dynamics1Level<fluid_dynamics::Integration2ndHalfInnerDissipativeRiemann> beam_density_relaxation(beam_body_inner);
+    Dynamics1Level<fluid_dynamics::Integration2ndHalfDissipativeRiemann> beam_density_relaxation(beam_body_inner);
     InteractionDynamics<continuum_dynamics::AngularConservativeShearAccelerationRelaxation>
         beam_shear_acceleration_angular_conservative(beam_body_inner);
     InteractionWithUpdate<KernelCorrectionMatrixInner> correction_matrix(beam_body_inner);
     Dynamics1Level<continuum_dynamics::ShearStressRelaxation> beam_shear_stress_relaxation(beam_body_inner);
-    // for dual time step
+    // for dual timestep
     ReduceDynamics<fluid_dynamics::AdvectionTimeStepSize> fluid_advection_time_step(beam_body, U_ref, 0.2);
     ReduceDynamics<fluid_dynamics::AcousticTimeStepSize> fluid_acoustic_time_step(beam_body, 0.4);
     // clamping a solid body part.
@@ -158,11 +158,11 @@ int main(int ac, char *av[])
     // outputs
     //-----------------------------------------------------------------------------
     IOEnvironment io_environment(sph_system);
-    BodyStatesRecordingToVtp write_beam_states(sph_system.real_bodies_);
+    BodyStatesRecordingToVtp write_beam_states(io_environment, sph_system.real_bodies_);
     RegressionTestEnsembleAverage<ObservedQuantityRecording<Vecd>>
-        write_beam_tip_displacement("Position", beam_observer_contact);
-    RegressionTestDynamicTimeWarping<ReducedQuantityRecording<TotalMechanicalEnergy>>
-        write_water_mechanical_energy(beam_body, gravity_ptr);
+        write_beam_tip_displacement("Position", io_environment, beam_observer_contact);
+    RegressionTestDynamicTimeWarping<ReducedQuantityRecording<ReduceDynamics<TotalMechanicalEnergy>>>
+        write_water_mechanical_energy(io_environment, beam_body, gravity_ptr);
     //----------------------------------------------------------------------
     //	Setup computing and initial conditions.
     //----------------------------------------------------------------------
@@ -240,6 +240,7 @@ int main(int ac, char *av[])
     {
         write_beam_tip_displacement.testResult();
     }
+
 
     return 0;
 }

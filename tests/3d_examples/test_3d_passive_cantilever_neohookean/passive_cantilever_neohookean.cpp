@@ -48,7 +48,7 @@ class TimeDependentGravity : public Gravity
   public:
     explicit TimeDependentGravity(Vecd gravity_vector)
         : Gravity(gravity_vector) {}
-    virtual Vecd InducedAcceleration(const Vecd &position) override
+    virtual Vecd InducedAcceleration(Vecd &position) override
     {
         Real current_time = GlobalStaticVariables::physical_time_;
         return current_time < time_to_full_gravity ? current_time * global_acceleration_ / time_to_full_gravity : global_acceleration_;
@@ -106,9 +106,9 @@ int main(int ac, char *av[])
         muscle_damping(0.1, cantilever_body_inner, "Velocity", physical_viscosity);
     /** Output */
     IOEnvironment io_environment(sph_system);
-    BodyStatesRecordingToVtp write_states(sph_system.real_bodies_);
+    BodyStatesRecordingToVtp write_states(io_environment, sph_system.real_bodies_);
     RegressionTestDynamicTimeWarping<ObservedQuantityRecording<Vecd>>
-        write_displacement("Position", cantilever_observer_contact);
+        write_displacement("Position", io_environment, cantilever_observer_contact);
     /**
      * From here the time stepping begins.
      * Set the starting time.
@@ -174,6 +174,7 @@ int main(int ac, char *av[])
     {
         write_displacement.testResult();
     }
+
 
     return 0;
 }

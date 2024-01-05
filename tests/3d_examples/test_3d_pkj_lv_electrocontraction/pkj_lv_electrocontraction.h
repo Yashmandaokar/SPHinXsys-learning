@@ -109,8 +109,15 @@ class FiberDirectionDiffusion : public DiffusionReaction<LocallyOrthotropicMuscl
 };
 using FiberDirectionDiffusionParticles = DiffusionReactionParticles<ElasticSolidParticles, FiberDirectionDiffusion>;
 /** Set diffusion relaxation. */
-using FiberDirectionDiffusionRelaxation =
-    DiffusionRelaxationRK2<DiffusionRelaxation<Inner<FiberDirectionDiffusionParticles, CorrectedKernelGradientInner>>>;
+class DiffusionRelaxation
+    : public DiffusionRelaxationRK2<
+          DiffusionRelaxationInner<FiberDirectionDiffusionParticles>>
+{
+  public:
+    explicit DiffusionRelaxation(InnerRelation &inner_relation)
+        : DiffusionRelaxationRK2(inner_relation){};
+    virtual ~DiffusionRelaxation(){};
+};
 /** Imposing diffusion boundary condition */
 class DiffusionBCs
     : public DiffusionReactionSpeciesConstraint<BodyPartByParticle, FiberDirectionDiffusionParticles>

@@ -43,7 +43,7 @@ class GeometricShape : public Shape
     virtual bool checkContain(const Vec3d &probe_point, bool BOUNDARY_INCLUDED = true) override;
     virtual Vec3d findClosestPoint(const Vec3d &probe_point) override;
 
-    SimTK::ContactGeometry *getContactGeometry();
+    SimTK::ContactGeometry *getContactGeometry() { return contact_geometry_; };
 
   protected:
     SimTK::ContactGeometry *contact_geometry_;

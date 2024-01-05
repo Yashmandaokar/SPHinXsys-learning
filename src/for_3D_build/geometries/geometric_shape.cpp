@@ -3,17 +3,6 @@
 namespace SPH
 {
 //=================================================================================================//
-SimTK::ContactGeometry *GeometricShape::getContactGeometry()
-{
-    if (contact_geometry_ == nullptr)
-    {
-        std::cout << "\n Error: ContactGeometry not setup yet! \n";
-        std::cout << __FILE__ << ':' << __LINE__ << std::endl;
-        exit(1);
-    }
-    return contact_geometry_;
-};
-//=================================================================================================//
 bool GeometricShape::checkContain(const Vec3d &probe_point, bool BOUNDARY_INCLUDED)
 {
     SimTK::UnitVec3 normal;

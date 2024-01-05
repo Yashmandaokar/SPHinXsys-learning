@@ -5,9 +5,9 @@
 
 #include "neighborhood.h"
 
-#include "all_complex_bodies.h"
 #include "base_particle_dynamics.h"
 #include "base_particles.hpp"
+#include "complex_body.h"
 
 namespace SPH
 {
@@ -71,15 +71,10 @@ void NeighborBuilder::initializeNeighbor(Neighborhood &neighborhood, const Real 
     neighborhood.e_ij_[current_size] = displacement / (distance + TinyReal);
 }
 //=================================================================================================//
-Kernel *NeighborBuilder::chooseKernel(SPHBody &body, SPHBody &target_body)
+NeighborBuilderInner::NeighborBuilderInner(SPHBody &body) : NeighborBuilder()
 {
-    Kernel *kernel = body.sph_adaptation_->getKernel();
-    Kernel *target_kernel = target_body.sph_adaptation_->getKernel();
-    return kernel->SmoothingLength() > target_kernel->SmoothingLength() ? kernel : target_kernel;
+    kernel_ = body.sph_adaptation_->getKernel();
 }
-//=================================================================================================//
-NeighborBuilderInner::NeighborBuilderInner(SPHBody &body)
-    : NeighborBuilder(body.sph_adaptation_->getKernel()) {}
 //=================================================================================================//
 void NeighborBuilderInner::operator()(Neighborhood &neighborhood,
                                       const Vecd &pos_i, size_t index_i, const ListData &list_data_j)
@@ -98,8 +93,11 @@ void NeighborBuilderInner::operator()(Neighborhood &neighborhood,
 //=================================================================================================//
 NeighborBuilderInnerAdaptive::
     NeighborBuilderInnerAdaptive(SPHBody &body)
-    : NeighborBuilder(body.sph_adaptation_->getKernel()),
-      h_ratio_(*body.getBaseParticles().getVariableByName<Real>("SmoothingLengthRatio")) {}
+    : NeighborBuilder(),
+      h_ratio_(*body.getBaseParticles().getVariableByName<Real>("SmoothingLengthRatio"))
+{
+    kernel_ = body.sph_adaptation_->getKernel();
+}
 //=================================================================================================//
 void NeighborBuilderInnerAdaptive::
 operator()(Neighborhood &neighborhood, const Vecd &pos_i, size_t index_i, const ListData &list_data_j)
@@ -121,8 +119,11 @@ operator()(Neighborhood &neighborhood, const Vecd &pos_i, size_t index_i, const 
 //=================================================================================================//
 NeighborBuilderSelfContact::
     NeighborBuilderSelfContact(SPHBody &body)
-    : NeighborBuilder(body.sph_adaptation_->getKernel()),
-      pos0_(*body.getBaseParticles().getVariableByName<Vecd>("InitialPosition")) {}
+    : NeighborBuilder(),
+      pos0_(*body.getBaseParticles().getVariableByName<Vecd>("InitialPosition"))
+{
+    kernel_ = body.sph_adaptation_->getKernel();
+}
 //=================================================================================================//
 void NeighborBuilderSelfContact::operator()(Neighborhood &neighborhood,
                                             const Vecd &pos_i, size_t index_i, const ListData &list_data_j)
@@ -140,8 +141,13 @@ void NeighborBuilderSelfContact::operator()(Neighborhood &neighborhood,
     }
 };
 //=================================================================================================//
-NeighborBuilderContact::NeighborBuilderContact(SPHBody &body, SPHBody &contact_body)
-    : NeighborBuilder(this->chooseKernel(body, contact_body)) {}
+NeighborBuilderContact::
+    NeighborBuilderContact(SPHBody &body, SPHBody &contact_body) : NeighborBuilder()
+{
+    Kernel *source_kernel = body.sph_adaptation_->getKernel();
+    Kernel *target_kernel = contact_body.sph_adaptation_->getKernel();
+    kernel_ = source_kernel->SmoothingLength() > target_kernel->SmoothingLength() ? source_kernel : target_kernel;
+}
 //=================================================================================================//
 void NeighborBuilderContact::operator()(Neighborhood &neighborhood,
                                         const Vecd &pos_i, size_t index_i, const ListData &list_data_j)
@@ -166,10 +172,14 @@ NeighborBuilderSurfaceContact::NeighborBuilderSurfaceContact(SPHBody &body, SPHB
     kernel_ = kernel_keeper_.createPtr<KernelWendlandC2>(0.5 * (source_smoothing_length + target_smoothing_length));
 }
 //=================================================================================================//
-NeighborBuilderContactBodyPart::NeighborBuilderContactBodyPart(SPHBody &body, BodyPart &contact_body_part)
-    : NeighborBuilder(this->chooseKernel(body, contact_body_part.getSPHBody()))
+NeighborBuilderContactBodyPart::
+    NeighborBuilderContactBodyPart(SPHBody &body, BodyPart &contact_body_part) : NeighborBuilder()
 {
     contact_body_part.getSPHBody().getBaseParticles().registerVariable(part_indicator_, "BodyPartByParticleIndicator");
+    Kernel *source_kernel = body.sph_adaptation_->getKernel();
+    Kernel *target_kernel = contact_body_part.getSPHBody().sph_adaptation_->getKernel();
+    kernel_ = source_kernel->SmoothingLength() > target_kernel->SmoothingLength() ? source_kernel : target_kernel;
+
     BodyPartByParticle &contact_body_part_by_particle = DynamicCast<BodyPartByParticle>(this, contact_body_part);
     IndexVector part_particles = contact_body_part_by_particle.body_part_particles_;
 
@@ -194,11 +204,13 @@ void NeighborBuilderContactBodyPart::operator()(Neighborhood &neighborhood,
     }
 }
 //=================================================================================================//
-NeighborBuilderContactAdaptive::NeighborBuilderContactAdaptive(SPHBody &body, SPHBody &contact_body)
-    : NeighborBuilder(body.sph_adaptation_->getKernel()), adaptation_(*body.sph_adaptation_),
-      contact_adaptation_(*contact_body.sph_adaptation_),
-      relative_h_ref_(adaptation_.ReferenceSmoothingLength() /
-                      contact_adaptation_.ReferenceSmoothingLength()) {}
+NeighborBuilderContactAdaptive::
+    NeighborBuilderContactAdaptive(SPHBody &body, SPHBody &contact_body)
+    : NeighborBuilder(), adaptation_(*body.sph_adaptation_), contact_adaptation_(*contact_body.sph_adaptation_),
+      relative_h_ref_(adaptation_.ReferenceSmoothingLength() / contact_adaptation_.ReferenceSmoothingLength())
+{
+    kernel_ = adaptation_.getKernel();
+}
 //=================================================================================================//
 void NeighborBuilderContactAdaptive::operator()(Neighborhood &neighborhood,
                                                 const Vecd &pos_i, size_t index_i, const ListData &list_data_j)

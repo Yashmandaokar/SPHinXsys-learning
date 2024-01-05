@@ -116,7 +116,8 @@ class SolidBodyForSimulation
 
 void expandBoundingBox(BoundingBox *original, BoundingBox *additional);
 
-void relaxParticlesSingleResolution(bool write_particles_to_file,
+void relaxParticlesSingleResolution(IOEnvironment &io_environment,
+                                    bool write_particles_to_file,
                                     SolidBodyFromMesh &solid_body_from_mesh,
                                     ElasticSolidParticles &solid_body_from_mesh_particles,
                                     InnerRelation &solid_body_from_mesh_inner);

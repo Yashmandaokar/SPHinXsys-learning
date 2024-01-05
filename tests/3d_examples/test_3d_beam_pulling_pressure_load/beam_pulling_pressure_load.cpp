@@ -47,7 +47,7 @@ class LoadForce : public BaseLocalDynamics<BodyPartByParticle>, public solid_dyn
     LoadForce(BodyPartByParticle &body_part, StdVec<std::array<Real, 2>> f_arr)
         : BaseLocalDynamics<BodyPartByParticle>(body_part),
           solid_dynamics::ElasticSolidDataSimple(sph_body_),
-          force_prior(particles_->force_prior_),
+          acc_prior(particles_->acc_prior_),
           mass_n_(particles_->mass_),
           Vol_(particles_->Vol_),
           F_(particles_->F_),
@@ -74,11 +74,11 @@ class LoadForce : public BaseLocalDynamics<BodyPartByParticle>, public solid_dyn
         // current_area = J * area_0 * current_normal_norm
         Real mean_force_ = getForce(time) * J * area_0_[index_i] * current_normal_norm;
 
-        force_prior[index_i] += mean_force_ * normal;
+        acc_prior[index_i] += (mean_force_ / mass_n_[index_i]) * normal;
     }
 
   protected:
-    StdLargeVec<Vecd> &force_prior;
+    StdLargeVec<Vecd> &acc_prior;
     StdLargeVec<Real> &mass_n_;
     StdLargeVec<Real> area_0_;
     StdLargeVec<Real> &Vol_;
@@ -169,9 +169,9 @@ int main(int ac, char *av[])
         beam_damping(0.1, beam_body_inner, "Velocity", physical_viscosity);
 
     /** Output */
-    BodyStatesRecordingToVtp write_states(sph_system.real_bodies_);
+    BodyStatesRecordingToVtp write_states(io_environment, sph_system.real_bodies_);
     RegressionTestTimeAverage<ObservedQuantityRecording<Real>>
-        write_beam_stress("VonMisesStress", beam_observer_contact);
+        write_beam_stress("VonMisesStress", io_environment, beam_observer_contact);
     /* time step begins */
     GlobalStaticVariables::physical_time_ = 0.0;
     sph_system.initializeSystemCellLinkedLists();

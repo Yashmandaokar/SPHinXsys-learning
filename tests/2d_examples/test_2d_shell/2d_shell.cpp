@@ -82,7 +82,7 @@ class TimeDependentExternalForce : public Gravity
   public:
     explicit TimeDependentExternalForce(Vecd external_force)
         : Gravity(external_force) {}
-    virtual Vecd InducedAcceleration(const Vecd &position) override
+    virtual Vecd InducedAcceleration(Vecd &position) override
     {
         Real current_time = GlobalStaticVariables::physical_time_;
         return current_time < time_to_full_external_force ? current_time * global_acceleration_ / time_to_full_external_force : global_acceleration_;
@@ -140,9 +140,9 @@ int main(int ac, char *av[])
         cylinder_rotation_damping(0.2, cylinder_body_inner, "AngularVelocity", physical_viscosity);
     /** Output */
     IOEnvironment io_environment(sph_system);
-    BodyStatesRecordingToVtp write_states(sph_system.real_bodies_);
+    BodyStatesRecordingToVtp write_states(io_environment, sph_system.real_bodies_);
     RegressionTestDynamicTimeWarping<ObservedQuantityRecording<Vecd>>
-        write_cylinder_max_displacement("Position", cylinder_observer_contact);
+        write_cylinder_max_displacement("Position", io_environment, cylinder_observer_contact);
 
     /** Apply initial condition. */
     sph_system.initializeSystemCellLinkedLists();

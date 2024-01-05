@@ -1,8 +1,8 @@
 /**
- * @file 3d_elasticSolid_shell_collision.cpp
- * @brief This is a benchmark test of the 3D elastic solid->shell contact/impact formulations.
- * @details We consider the collision of an elastic ball bouncing in a rigid cylindrical shell structure.
- * @author Massoud Rezavand and Xiangyu Hu
+ * @file 	3d_elasticSolid_shell_collision.cpp
+ * @brief 	This is a benchmark test of the 3D elastic solid->shell contact/impact formulations.
+ * @details  We consider the collision of an elastic ball bouncing in a spherical shell box.
+ * @author 	Massoud Rezavand, Virtonomy GmbH
  */
 #include "sphinxsys.h" //SPHinXsys Library.
 using namespace SPH;   // Namespace cite here.
@@ -14,10 +14,13 @@ Real thickness = resolution_ref * 1.;               /**< shell thickness. */
 Real radius = 2.0;                                  /**< cylinder radius. */
 Real half_height = 1.0;                             /** Height of the cylinder. */
 Real radius_mid_surface = radius + thickness / 2.0; /** Radius of the mid surface. */
+Vec3d ball_center(radius / 2.0, 0.0, 0.0);
 int particle_number_mid_surface = int(2.0 * radius_mid_surface * Pi * 215.0 / 360.0 / resolution_ref);
 int particle_number_height = 2 * int(half_height / resolution_ref);
 int BWD = 1; /** Width of the boundary layer measured by number of particles. */
-Vec3d ball_center(radius / 2.0, 0.0, 0.0);
+BoundingBox system_domain_bounds(Vec3d(-radius - thickness, -half_height - thickness, -radius - thickness),
+                                 Vec3d(radius + thickness, half_height + thickness, radius + thickness));
+StdVec<Vecd> ball_observation_location = {ball_center};
 Real ball_radius = 0.5;
 Real gravity_g = 1.0;
 //----------------------------------------------------------------------
@@ -58,17 +61,18 @@ int main(int ac, char *av[])
     //----------------------------------------------------------------------
     //	Build up the environment of a SPHSystem with global controls.
     //----------------------------------------------------------------------
-    BoundingBox system_domain_bounds(Vec3d(-radius - thickness, -half_height - thickness, -radius - thickness),
-                                     Vec3d(radius + thickness, half_height + thickness, radius + thickness));
     SPHSystem sph_system(system_domain_bounds, resolution_ref);
+    // sph_system.GenerateRegressionData() = true;
     /** Tag for running particle relaxation for the initially body-fitted distribution */
     sph_system.setRunParticleRelaxation(false);
     /** Tag for starting with relaxed body-fitted particles distribution */
     sph_system.setReloadParticles(false);
-    sph_system.handleCommandlineOptions(ac, av)->setIOEnvironment();
+    sph_system.handleCommandlineOptions(ac, av);
+    IOEnvironment io_environment(sph_system);
     //----------------------------------------------------------------------
     //	Creating body, materials and particles.
     //----------------------------------------------------------------------
+    /** create a shell body. */
     SolidBody shell(sph_system, makeShared<DefaultShape>("shell"));
     shell.defineParticlesAndMaterial<ShellParticles, SaintVenantKirchhoffSolid>(rho0_s, Youngs_modulus, poisson);
     shell.generateParticles<CylinderParticleGenerator>();
@@ -77,16 +81,16 @@ int main(int ac, char *av[])
     ball.defineParticlesAndMaterial<ElasticSolidParticles, NeoHookeanSolid>(rho0_s, Youngs_modulus, poisson);
     if (!sph_system.RunParticleRelaxation() && sph_system.ReloadParticles())
     {
-        ball.generateParticles<ParticleGeneratorReload>(ball.getName());
+        ball.generateParticles<ParticleGeneratorReload>(io_environment, ball.getName());
     }
     else
     {
-        ball.defineBodyLevelSetShape()->writeLevelSet(sph_system);
+        ball.defineBodyLevelSetShape()->writeLevelSet(io_environment);
         ball.generateParticles<ParticleGeneratorLattice>();
     }
 
     ObserverBody ball_observer(sph_system, "BallObserver");
-    ball_observer.generateParticles<ObserverParticleGenerator>(StdVec<Vec3d>{ball_center});
+    ball_observer.generateParticles<ObserverParticleGenerator>(ball_observation_location);
     //----------------------------------------------------------------------
     //	Run particle relaxation for body-fitted distribution if chosen.
     //----------------------------------------------------------------------
@@ -104,8 +108,8 @@ int main(int ac, char *av[])
         //----------------------------------------------------------------------
         //	Output for particle relaxation.
         //----------------------------------------------------------------------
-        BodyStatesRecordingToVtp write_relaxed_particles(sph_system.real_bodies_);
-        ReloadParticleIO write_particle_reload_files(ball);
+        BodyStatesRecordingToVtp write_relaxed_particles(io_environment, sph_system.real_bodies_);
+        ReloadParticleIO write_particle_reload_files(io_environment, ball);
         //----------------------------------------------------------------------
         //	Particle relaxation starts here.
         //----------------------------------------------------------------------
@@ -133,8 +137,7 @@ int main(int ac, char *av[])
     //----------------------------------------------------------------------
     //	Define body relation map.
     //	The contact map gives the topological connections between the bodies.
-    //	Basically the the range of bodies to build neighbor particle lists.
-    //  Generally, we first define all the inner relations, then the contact relations.
+    //	Basically the range of bodies to build neighbor particle lists.
     //----------------------------------------------------------------------
     InnerRelation ball_inner(ball);
     SurfaceContactRelation ball_contact(ball, {&shell});
@@ -157,10 +160,10 @@ int main(int ac, char *av[])
     //----------------------------------------------------------------------
     //	Define the methods for I/O operations and observations of the simulation.
     //----------------------------------------------------------------------
-    BodyStatesRecordingToVtp body_states_recording(sph_system.real_bodies_);
-    BodyStatesRecordingToVtp write_ball_state({&ball});
+    BodyStatesRecordingToVtp body_states_recording(io_environment, sph_system.real_bodies_);
+    BodyStatesRecordingToVtp write_ball_state(io_environment, {&ball});
     RegressionTestDynamicTimeWarping<ObservedQuantityRecording<Vecd>>
-        write_ball_center_displacement("Position", ball_observer_contact);
+        write_ball_center_displacement("Position", io_environment, ball_observer_contact);
     //----------------------------------------------------------------------
     //	Prepare the simulation with cell linked list, configuration
     //	and case specified initial condition if necessary.
@@ -168,9 +171,9 @@ int main(int ac, char *av[])
     sph_system.initializeSystemCellLinkedLists();
     sph_system.initializeSystemConfigurations();
     ball_corrected_configuration.exec();
-    //----------------------------------------------------------------------
-    //	Setup for time-stepping control
-    //----------------------------------------------------------------------
+    /** Initial states output. */
+    body_states_recording.writeToFile(0);
+    /** Main loop. */
     int ite = 0;
     Real T0 = 10.0;
     Real end_time = T0;
@@ -182,10 +185,6 @@ int main(int ac, char *av[])
     //----------------------------------------------------------------------
     TickCount t1 = TickCount::now();
     TimeInterval interval;
-    //----------------------------------------------------------------------
-    //	First output before the main loop.
-    //----------------------------------------------------------------------
-    body_states_recording.writeToFile(0);
     //----------------------------------------------------------------------
     //	Main loop starts here.
     //----------------------------------------------------------------------
@@ -241,6 +240,7 @@ int main(int ac, char *av[])
     {
         write_ball_center_displacement.testResult();
     }
+
 
     return 0;
 }

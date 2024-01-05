@@ -136,7 +136,7 @@ int main(int ac, char *av[])
     ReduceDynamics<fluid_dynamics::AcousticTimeStepSize> fluid_acoustic_time_step(plate_body, 0.4);
     /** stress relaxation. */
     Dynamics1Level<continuum_dynamics::Integration1stHalf> plate_pressure_relaxation(plate_body_inner);
-    Dynamics1Level<fluid_dynamics::Integration2ndHalfInnerDissipativeRiemann> plate_density_relaxation(plate_body_inner);
+    Dynamics1Level<fluid_dynamics::Integration2ndHalfDissipativeRiemann> plate_density_relaxation(plate_body_inner);
     InteractionDynamics<continuum_dynamics::AngularConservativeShearAccelerationRelaxation>
         plate_shear_acceleration_angular_conservative(plate_body_inner);
     /** Corrected configuration. */
@@ -149,14 +149,14 @@ int main(int ac, char *av[])
         constrain_mass_center(plate_body, Vecd(1.0, 1.0, 0.0));
     /** Output */
     IOEnvironment io_environment(sph_system);
-    BodyStatesRecordingToVtp write_states(sph_system.real_bodies_);
-    RestartIO restart_io(sph_system.real_bodies_);
+    BodyStatesRecordingToVtp write_states(io_environment, sph_system.real_bodies_);
+    RestartIO restart_io(io_environment, sph_system.real_bodies_);
     // ObservedQuantityRecording<Vecd>
-    // 	write_plate_displacement("Position", plate_observer_contact);
+    // 	write_plate_displacement("Position", io_environment, plate_observer_contact);
     RegressionTestEnsembleAverage<ObservedQuantityRecording<Vecd>>
-        write_plate_displacement("Position", plate_observer_contact);
-    RegressionTestDynamicTimeWarping<ReducedQuantityRecording<TotalMechanicalEnergy>>
-        write_kinetic_energy(plate_body);
+        write_plate_displacement("Position", io_environment, plate_observer_contact);
+    RegressionTestDynamicTimeWarping<ReducedQuantityRecording<ReduceDynamics<TotalMechanicalEnergy>>>
+        write_kinetic_energy(io_environment, plate_body);
 
     /** Apply initial condition. */
     sph_system.initializeSystemCellLinkedLists();
@@ -247,6 +247,7 @@ int main(int ac, char *av[])
     {
         write_kinetic_energy.testResult();
     }
+
 
     return 0;
 }

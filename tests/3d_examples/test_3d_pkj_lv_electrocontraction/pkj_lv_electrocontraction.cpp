@@ -45,7 +45,7 @@ int main(int ac, char *av[])
     Heart triangle_mesh_heart_model("HeartModel");
     SharedPtr<LevelSetShape> level_set_heart_model =
         makeShared<LevelSetShape>(triangle_mesh_heart_model, makeShared<SPHAdaptation>(dp_0));
-    level_set_heart_model->correctLevelSetSign()->writeLevelSet(sph_system);
+    level_set_heart_model->correctLevelSetSign()->writeLevelSet(io_environment);
     //----------------------------------------------------------------------
     //	SPH Particle relaxation section
     //----------------------------------------------------------------------
@@ -64,13 +64,13 @@ int main(int ac, char *av[])
         /** Time step for diffusion. */
         GetDiffusionTimeStepSize<FiberDirectionDiffusionParticles> get_time_step_size(herat_model);
         /** Diffusion process for diffusion body. */
-        FiberDirectionDiffusionRelaxation diffusion_relaxation(herat_model_inner);
+        DiffusionRelaxation diffusion_relaxation(herat_model_inner);
         /** Compute the fiber and sheet after diffusion. */
         SimpleDynamics<ComputeFiberAndSheetDirections> compute_fiber_sheet(herat_model);
         /** Write the body state to Vtp file. */
-        BodyStatesRecordingToVtp write_herat_model_state_to_vtp({herat_model});
+        BodyStatesRecordingToVtp write_herat_model_state_to_vtp(io_environment, {herat_model});
         /** Write the particle reload files. */
-        ReloadParticleIO write_particle_reload_files(herat_model);
+        ReloadParticleIO write_particle_reload_files(io_environment, herat_model);
         //----------------------------------------------------------------------
         //	Physics relaxation starts here.
         //----------------------------------------------------------------------
@@ -131,7 +131,7 @@ int main(int ac, char *av[])
         ElectroPhysiologyParticles, MonoFieldElectroPhysiology>(
         muscle_reaction_model_ptr, TypeIdentity<LocalDirectionalDiffusion>(), diffusion_coeff, bias_coeff, fiber_direction);
     (!sph_system.RunParticleRelaxation() && sph_system.ReloadParticles())
-        ? physiology_heart.generateParticles<ParticleGeneratorReload>("HeartModel")
+        ? physiology_heart.generateParticles<ParticleGeneratorReload>(io_environment, "HeartModel")
         : physiology_heart.generateParticles<ParticleGeneratorLattice>();
 
     /** create a SPH body, material and particles */
@@ -139,7 +139,7 @@ int main(int ac, char *av[])
     mechanics_heart.defineParticlesAndMaterial<
         ElasticSolidParticles, ActiveMuscle<LocallyOrthotropicMuscle>>(rho0_s, bulk_modulus, fiber_direction, sheet_direction, a0, b0);
     (!sph_system.RunParticleRelaxation() && sph_system.ReloadParticles())
-        ? mechanics_heart.generateParticles<ParticleGeneratorReload>("HeartModel")
+        ? mechanics_heart.generateParticles<ParticleGeneratorReload>(io_environment, "HeartModel")
         : mechanics_heart.generateParticles<ParticleGeneratorLattice>();
 
     /** Creat a Purkinje network for fast diffusion, material and particles */
@@ -174,7 +174,7 @@ int main(int ac, char *av[])
     /** Time step size calculation. */
     electro_physiology::GetElectroPhysiologyTimeStepSize get_myocardium_physiology_time_step(physiology_heart);
     /** Diffusion process for diffusion body. */
-    electro_physiology::ElectroPhysiologyDiffusionRelaxationComplex<Dirichlet> myocardium_diffusion_relaxation(physiology_heart_inner, physiology_heart_contact_with_pkj_leaves);
+    electro_physiology::ElectroPhysiologyDiffusionRelaxationComplex myocardium_diffusion_relaxation(physiology_heart_inner, physiology_heart_contact_with_pkj_leaves);
     /** Solvers for ODE system */
     electro_physiology::ElectroPhysiologyReactionRelaxationForward myocardium_reaction_relaxation_forward(physiology_heart);
     electro_physiology::ElectroPhysiologyReactionRelaxationBackward myocardium_reaction_relaxation_backward(physiology_heart);
@@ -186,9 +186,9 @@ int main(int ac, char *av[])
     electro_physiology::ElectroPhysiologyReactionRelaxationForward pkj_reaction_relaxation_forward(pkj_body);
     electro_physiology::ElectroPhysiologyReactionRelaxationBackward pkj_reaction_relaxation_backward(pkj_body);
     /**IO for observer.*/
-    BodyStatesRecordingToVtp write_states(sph_system.real_bodies_);
-    ObservedQuantityRecording<Real> write_voltage("Voltage", voltage_observer_contact);
-    ObservedQuantityRecording<Vecd> write_displacement("Position", myocardium_observer_contact);
+    BodyStatesRecordingToVtp write_states(io_environment, sph_system.real_bodies_);
+    ObservedQuantityRecording<Real> write_voltage("Voltage", io_environment, voltage_observer_contact);
+    ObservedQuantityRecording<Vecd> write_displacement("Position", io_environment, myocardium_observer_contact);
     /**Apply the Iron stimulus.*/
     SimpleDynamics<ApplyStimulusCurrentToMyocardium> apply_stimulus_myocardium(physiology_heart);
     SimpleDynamics<ApplyStimulusCurrentToPKJ> apply_stimulus_pkj(pkj_body);

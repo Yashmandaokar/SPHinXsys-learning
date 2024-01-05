@@ -29,7 +29,7 @@
 #ifndef GENERAL_GEOMETRIC_H
 #define GENERAL_GEOMETRIC_H
 
-#include "base_general_dynamics.h"
+#include "general_dynamics.h"
 
 namespace SPH
 {

@@ -86,9 +86,7 @@ class SPHBody
     std::string getName() { return body_name_; };
     SPHSystem &getSPHSystem();
     SPHBody &getSPHBody() { return *this; };
-    BaseParticles &getBaseParticles();
-    BaseMaterial &getBaseMaterial();
-    StdVec<SPHRelation *> &getBodyRelations() { return body_relations_; };
+    BaseParticles &getBaseParticles() { return *base_particles_; };
     size_t &LoopRange() { return base_particles_->total_real_particles_; };
     size_t SizeOfLoopRange() { return base_particles_->total_real_particles_; };
     Real getSPHBodyResolutionRef() { return sph_adaptation_->ReferenceSpacing(); };
@@ -103,25 +101,25 @@ class SPHBody
     //----------------------------------------------------------------------
     virtual void defineAdaptationRatios(Real h_spacing_ratio, Real new_system_refinement_ratio = 1.0);
 
-    template <class AdaptationType, typename... Args>
-    void defineAdaptation(Args &&...args)
+    template <class AdaptationType, typename... ConstructorArgs>
+    void defineAdaptation(ConstructorArgs &&...args)
     {
         sph_adaptation_ = sph_adaptation_ptr_keeper_
-                              .createPtr<AdaptationType>(*this, std::forward<Args>(args)...);
+                              .createPtr<AdaptationType>(*this, std::forward<ConstructorArgs>(args)...);
     };
 
-    template <typename... Args>
-    LevelSetShape *defineComponentLevelSetShape(const std::string &shape_name, Args &&...args)
+    template <typename... ConstructorArgs>
+    LevelSetShape *defineComponentLevelSetShape(const std::string &shape_name, ConstructorArgs &&...args)
     {
         ComplexShape *complex_shape = DynamicCast<ComplexShape>(this, body_shape_);
-        return complex_shape->defineLevelSetShape(*this, shape_name, std::forward<Args>(args)...);
+        return complex_shape->defineLevelSetShape(*this, shape_name, std::forward<ConstructorArgs>(args)...);
     };
 
-    template <typename... Args>
-    LevelSetShape *defineBodyLevelSetShape(Args &&...args)
+    template <typename... ConstructorArgs>
+    LevelSetShape *defineBodyLevelSetShape(ConstructorArgs &&...args)
     {
         LevelSetShape *levelset_shape =
-            shape_ptr_keeper_.resetPtr<LevelSetShape>(*this, *body_shape_, std::forward<Args>(args)...);
+            shape_ptr_keeper_.resetPtr<LevelSetShape>(*this, *body_shape_, std::forward<ConstructorArgs>(args)...);
 
         body_shape_ = levelset_shape;
         return levelset_shape;
@@ -136,20 +134,20 @@ class SPHBody
     };
 
     /** partial construct particles with material informaiton. note that particle data not initialized yet */
-    template <class ParticleType = BaseParticles, class MaterialType = BaseMaterial, typename... Args>
-    void defineParticlesAndMaterial(Args &&...args)
+    template <class ParticleType = BaseParticles, class MaterialType = BaseMaterial, typename... ConstructorArgs>
+    void defineParticlesAndMaterial(ConstructorArgs &&...args)
     {
-        MaterialType *material = base_material_ptr_keeper_.createPtr<MaterialType>(std::forward<Args>(args)...);
+        MaterialType *material = base_material_ptr_keeper_.createPtr<MaterialType>(std::forward<ConstructorArgs>(args)...);
         defineParticlesWithMaterial<ParticleType>(material);
     };
 
     /** initialize particle data using a particle generator for geometric data.
      * the local material parameters are also initialized. */
-    template <class ParticleGeneratorType, typename... Args>
-    void generateParticles(Args &&...args)
+    template <class ParticleGeneratorType, typename... ConstructorArgs>
+    void generateParticles(ConstructorArgs &&...args)
     {
         sph_adaptation_->registerAdaptationVariables(*base_particles_);
-        ParticleGeneratorType particle_generator(*this, std::forward<Args>(args)...);
+        ParticleGeneratorType particle_generator(*this, std::forward<ConstructorArgs>(args)...);
         particle_generator.generateParticlesWithBasicVariables();
         base_particles_->initializeOtherVariables();
         base_material_->initializeLocalParameters(base_particles_);
@@ -211,9 +209,9 @@ class RealBody : public SPHBody
     bool cell_linked_list_created_;
 
   public:
-    template <typename... Args>
-    RealBody(Args &&...args)
-        : SPHBody(std::forward<Args>(args)...),
+    template <typename... ConstructorArgs>
+    RealBody(ConstructorArgs &&...args)
+        : SPHBody(std::forward<ConstructorArgs>(args)...),
           use_split_cell_lists_(false), iteration_count_(1),
           cell_linked_list_created_(false)
     {

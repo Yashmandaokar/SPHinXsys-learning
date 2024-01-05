@@ -116,20 +116,16 @@ int main(int ac, char *av[])
     //  At last, we define the complex relaxations by combining previous defined
     //  inner and contact relations.
     //----------------------------------------------------------------------
-    InnerRelation water_body_inner(water_body);
-    ContactRelation water_body_contact(water_body, {&wall});
-    ContactRelation fluid_observer_contact(fluid_observer, {&water_body});
-    //----------------------------------------------------------------------
-    // Combined relations built from basic relations
-    //----------------------------------------------------------------------
-    ComplexRelation water_body_complex(water_body_inner, water_body_contact);
+    ComplexRelation water_body_complex(water_body, {&wall});
+    ContactRelation fluid_observer_contact_relation(fluid_observer, {&water_body});
     //----------------------------------------------------------------------
     //	Define all numerical methods which are used in this case.
     //----------------------------------------------------------------------
-    Dynamics1Level<fluid_dynamics::Integration1stHalfWithWallRiemann> pressure_relaxation(water_body_inner, water_body_contact);
-    Dynamics1Level<fluid_dynamics::Integration2ndHalfWithWallRiemann> density_relaxation(water_body_inner, water_body_contact);
-    InteractionWithUpdate<fluid_dynamics::DensitySummationComplexFreeSurface> update_density_by_summation(water_body_inner, water_body_contact);
-    InteractionWithUpdate<SpatialTemporalFreeSurfaceIndicationComplex> indicate_free_surface(water_body_inner, water_body_contact);
+    Dynamics1Level<fluid_dynamics::Integration1stHalfRiemannWithWall> pressure_relaxation(water_body_complex);
+    Dynamics1Level<fluid_dynamics::Integration2ndHalfRiemannWithWall> density_relaxation(water_body_complex);
+    InteractionWithUpdate<fluid_dynamics::DensitySummationFreeSurfaceComplex> update_density_by_summation(water_body_complex);
+    InteractionWithUpdate<fluid_dynamics::SpatialTemporalFreeSurfaceIdentificationComplex>
+        indicate_free_surface(water_body_complex);
     water_body.addBodyStateForRecording<Real>("PositionDivergence"); // for debug
     water_body.addBodyStateForRecording<int>("Indicator");           // for debug
 
@@ -147,11 +143,11 @@ int main(int ac, char *av[])
     //	File Output
     //----------------------------------------------------------------------
     IOEnvironment io_environment(sph_system);
-    BodyStatesRecordingToVtp body_states_recording(sph_system.real_bodies_);
-    RegressionTestDynamicTimeWarping<ReducedQuantityRecording<TotalMechanicalEnergy>>
-        write_water_mechanical_energy(water_body, gravity_ptr);
+    BodyStatesRecordingToVtp body_states_recording(io_environment, sph_system.real_bodies_);
+    RegressionTestDynamicTimeWarping<ReducedQuantityRecording<ReduceDynamics<TotalMechanicalEnergy>>>
+        write_water_mechanical_energy(io_environment, water_body, gravity_ptr);
     RegressionTestDynamicTimeWarping<ObservedQuantityRecording<Real>>
-        write_recorded_water_pressure("Pressure", fluid_observer_contact);
+        write_recorded_water_pressure("Pressure", io_environment, fluid_observer_contact_relation);
     //----------------------------------------------------------------------
     //	Prepare the simulation with cell linked list, configuration
     //	and case specified initial condition if necessary.
@@ -218,7 +214,7 @@ int main(int ac, char *av[])
 
             water_body.updateCellLinkedListWithParticleSort(100);
             water_body_complex.updateConfiguration();
-            fluid_observer_contact.updateConfiguration();
+            fluid_observer_contact_relation.updateConfiguration();
         }
 
         TickCount t2 = TickCount::now();
@@ -238,6 +234,7 @@ int main(int ac, char *av[])
 
     write_water_mechanical_energy.testResult();
     write_recorded_water_pressure.testResult();
+
 
     return 0;
 }

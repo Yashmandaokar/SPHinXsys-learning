@@ -38,9 +38,13 @@ PositionSolidBody::
 //=================================================================================================//
 Vecd PositionSolidBody::getDisplacement(size_t index_i, Real dt)
 {
+    Vecd displacement = Vecd::Zero();
     // displacement from the initial position
     Vecd pos_final = pos0_[index_i] + translation_;
-    return (pos_final - pos_[index_i]) * dt / (end_time_ - GlobalStaticVariables::physical_time_);
+    displacement = (pos_final - pos_[index_i]) * dt /
+                   (end_time_ - GlobalStaticVariables::physical_time_);
+
+    return displacement;
 }
 //=================================================================================================//
 void PositionSolidBody::update(size_t index_i, Real dt)
@@ -65,9 +69,12 @@ PositionScaleSolidBody::
 //=================================================================================================//
 Vecd PositionScaleSolidBody::getDisplacement(size_t index_i, Real dt)
 {
+    Vecd displacement = Vecd::Zero();
     // displacement from the initial position
     Vecd pos_final = pos_0_center_ + end_scale_ * (pos0_[index_i] - pos_0_center_);
-    return (pos_final - pos_[index_i]) * dt / (end_time_ - GlobalStaticVariables::physical_time_);
+    displacement = (pos_final - pos_[index_i]) * dt /
+                   (end_time_ - GlobalStaticVariables::physical_time_);
+    return displacement;
 }
 //=================================================================================================//
 void PositionScaleSolidBody::update(size_t index_i, Real dt)

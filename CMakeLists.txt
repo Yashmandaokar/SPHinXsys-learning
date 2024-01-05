@@ -12,7 +12,6 @@ option(SPHINXSYS_BUILD_TESTS "Build tests" ON)
 option(TEST_STATE_RECORDING "State recording when run Ctest" ON)
 option(SPHINXSYS_DEVELOPER_MODE "Developer mode has more flags active for code quality" ON)
 option(SPHINXSYS_USE_FLOAT "Build using float (single-precision floating-point format) as primary type" OFF)
-option(SPHINXSYS_USE_SIMD "Build using SIMD instructions" OFF)
 option(SPHINXSYS_MODULE_OPENCASCADE "Build extension relying on OpenCASCADE" OFF)
 
 # ------ Global properties (Some cannot be set on INTERFACE targets)
@@ -53,10 +52,8 @@ target_compile_definitions(sphinxsys_core INTERFACE SPHINXSYS_USE_FLOAT=$<BOOL:$
 
 # ------ Dependencies
 # ## SIMD flags
-if(SPHINXSYS_USE_SIMD)
-    find_package(SIMD QUIET)
-    target_compile_options(sphinxsys_core INTERFACE ${SIMD_CXX_FLAGS})
-endif()
+find_package(SIMD QUIET)
+target_compile_options(sphinxsys_core INTERFACE ${SIMD_CXX_FLAGS})
 
 # ## Simbody
 find_package(Simbody CONFIG REQUIRED)

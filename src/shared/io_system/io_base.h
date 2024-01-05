@@ -42,7 +42,27 @@ namespace fs = std::filesystem;
 
 namespace SPH
 {
-class SPHSystem;
+/**
+ * @class IOEnvironment
+ * @brief The base class which defines folders for output,
+ * restart and particle reload folders.
+ */
+class IOEnvironment
+{
+  private:
+    UniquePtrKeeper<ParameterizationIO> parameterization_io_ptr_keeper_;
+
+  public:
+    SPHSystem &sph_system_;
+    std::string input_folder_;
+    std::string output_folder_;
+    std::string restart_folder_;
+    std::string reload_folder_;
+
+    explicit IOEnvironment(SPHSystem &sph_system, bool delete_output = true);
+    virtual ~IOEnvironment(){};
+    ParameterizationIO &defineParameterizationIO();
+};
 
 /**
  * @class BaseIO
@@ -51,14 +71,14 @@ class SPHSystem;
 class BaseIO
 {
   public:
-    explicit BaseIO(SPHSystem &sph_system);
+    explicit BaseIO(IOEnvironment &io_environment)
+        : io_environment_(io_environment){};
     virtual ~BaseIO(){};
 
     /** write with filename indicated by iteration step */
     virtual void writeToFile(size_t iteration_step) = 0;
 
   protected:
-    SPHSystem &sph_system_;
     IOEnvironment &io_environment_;
 
     std::string convertPhysicalTimeToString(Real physical_time);
@@ -78,10 +98,12 @@ class BaseIO
  */
 class BodyStatesRecording : public BaseIO
 {
-
   public:
-    BodyStatesRecording(SPHBodyVector bodies);
-    BodyStatesRecording(SPHBody &body);
+    BodyStatesRecording(IOEnvironment &io_environment, SPHBodyVector bodies)
+        : BaseIO(io_environment), bodies_(bodies),
+          state_recording_(io_environment.sph_system_.StateRecording()){};
+    BodyStatesRecording(IOEnvironment &io_environment, SPHBody &body)
+        : BodyStatesRecording(io_environment, {&body}){};
     virtual ~BodyStatesRecording(){};
     /** write with filename indicated by physical time */
     void writeToFile();
@@ -108,7 +130,7 @@ class RestartIO : public BaseIO
     Real readRestartTime(size_t restart_step);
 
   public:
-    RestartIO(SPHBodyVector bodies);
+    RestartIO(IOEnvironment &io_environment, SPHBodyVector bodies);
     virtual ~RestartIO(){};
 
     virtual void writeToFile(size_t iteration_step = 0) override;
@@ -132,9 +154,9 @@ class ReloadParticleIO : public BaseIO
     StdVec<std::string> file_names_;
 
   public:
-    ReloadParticleIO(SPHBodyVector bodies);
-    ReloadParticleIO(SPHBody &sph_body);
-    ReloadParticleIO(SPHBody &sph_body, const std::string &given_body_name);
+    ReloadParticleIO(IOEnvironment &io_environment, SPHBodyVector bodies);
+    ReloadParticleIO(IOEnvironment &io_environment, SPHBody &sph_body);
+    ReloadParticleIO(IOEnvironment &io_environment, SPHBody &sph_body, const std::string &given_body_name);
     virtual ~ReloadParticleIO(){};
 
     virtual void writeToFile(size_t iteration_step = 0) override;

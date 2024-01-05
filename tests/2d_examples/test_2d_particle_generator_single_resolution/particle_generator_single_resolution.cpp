@@ -1,7 +1,7 @@
 /**
 * @file 	particle_generator_single_resolution.cpp
-* @brief 	This is the test of using level set to generate particles with single resolution and relax particles.
-* @details	We use this case to test the particle generation and relaxation by level set for a complex geometry (2D).
+* @brief 	This is the test of using levelset to generate particles with single resolution and relax particles.
+* @details	We use this case to test the particle generation and relaxation by levelset for a complex geometry (2D).
 *			Before particle generation, we clean the level set, then do re-initialization.
 
 * @author 	Yongchuan Yu and Xiangyu Hu
@@ -46,12 +46,13 @@ int main(int ac, char *av[])
     //	Build up -- a SPHSystem
     //----------------------------------------------------------------------
     SPHSystem sph_system(system_domain_bounds, resolution_ref);
-    sph_system.handleCommandlineOptions(ac, av)->setIOEnvironment();
+    sph_system.handleCommandlineOptions(ac, av);
+    IOEnvironment io_environment(sph_system);
     //----------------------------------------------------------------------
     //	Creating body, materials and particles.
     //----------------------------------------------------------------------
     RealBody input_body(sph_system, makeShared<InputBody>("SPHInXsysLogo"));
-    input_body.defineBodyLevelSetShape()->writeLevelSet(sph_system);
+    input_body.defineBodyLevelSetShape()->writeLevelSet(io_environment);
     input_body.defineParticlesAndMaterial();
     input_body.generateParticles<ParticleGeneratorLattice>();
     //----------------------------------------------------------------------
@@ -67,12 +68,12 @@ int main(int ac, char *av[])
     //	Methods used for particle relaxation.
     //----------------------------------------------------------------------
     SimpleDynamics<RandomizeParticlePosition> random_input_body_particles(input_body);
-    relax_dynamics::RelaxationStepLevelSetCorrectionInner relaxation_step_inner(input_body_inner);
+    relax_dynamics::RelaxationStepInner relaxation_step_inner(input_body_inner, true);
     //----------------------------------------------------------------------
     //	Define simple file input and outputs functions.
     //----------------------------------------------------------------------
-    BodyStatesRecordingToVtp input_body_recording_to_vtp(input_body);
-    MeshRecordingToPlt cell_linked_list_recording(sph_system, input_body.getCellLinkedList());
+    BodyStatesRecordingToVtp input_body_recording_to_vtp(io_environment, input_body);
+    MeshRecordingToPlt cell_linked_list_recording(io_environment, input_body.getCellLinkedList());
     //----------------------------------------------------------------------
     //	Prepare the simulation with cell linked list, configuration
     //	and case specified initial condition if necessary.
@@ -100,6 +101,7 @@ int main(int ac, char *av[])
         }
     }
     std::cout << "The physics relaxation process finish !" << std::endl;
+
 
     return 0;
 }

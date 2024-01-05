@@ -141,7 +141,8 @@ int main(int ac, char *av[])
     //	Build up the environment of a SPHSystem.
     //----------------------------------------------------------------------
     SPHSystem sph_system(system_domain_bounds, resolution_ref);
-    sph_system.handleCommandlineOptions(ac, av)->setIOEnvironment();
+    sph_system.handleCommandlineOptions(ac, av);
+    IOEnvironment io_environment(sph_system);
     //----------------------------------------------------------------------
     //	Creating body, materials and particles.
     //----------------------------------------------------------------------
@@ -169,16 +170,10 @@ int main(int ac, char *av[])
     //  At last, we define the complex relaxations by combining previous defined
     //  inner and contact relations.
     //----------------------------------------------------------------------
-    InnerRelation water_block_inner(water_block);
-    ContactRelation water_block_contact(water_block, RealBodyVector{&wall_boundary, &gate});
-    InnerRelation gate_inner(gate);
-    ContactRelation gate_water_contact(gate, {&water_block});
-    ContactRelation gate_observer_contact(gate_observer, {&gate});
-    //----------------------------------------------------------------------
-    // Combined relations built from basic relations
-    //----------------------------------------------------------------------
-    ComplexRelation water_block_complex(water_block_inner, water_block_contact);
-    //----------------------------------------------------------------------
+    ComplexRelation water_block_complex_relation(water_block, RealBodyVector{&wall_boundary, &gate});
+    InnerRelation gate_inner_relation(gate);
+    ContactRelation gate_water_contact_relation(gate, {&water_block});
+    ContactRelation gate_observer_contact_relation(gate_observer, {&gate});
     //----------------------------------------------------------------------
     //	Define the main numerical methods used in the simulation.
     //	Note that there may be data dependence on the constructors of these methods.
@@ -186,9 +181,9 @@ int main(int ac, char *av[])
     //----------------------------------------------------------------------
     //	Algorithms of fluid dynamics.
     //----------------------------------------------------------------------
-    Dynamics1Level<fluid_dynamics::Integration1stHalfWithWallRiemann> pressure_relaxation(water_block_inner, water_block_contact);
-    Dynamics1Level<fluid_dynamics::Integration2ndHalfWithWallRiemann> density_relaxation(water_block_inner, water_block_contact);
-    InteractionWithUpdate<fluid_dynamics::DensitySummationComplexFreeSurface> update_density_by_summation(water_block_inner, water_block_contact);
+    Dynamics1Level<fluid_dynamics::Integration1stHalfRiemannWithWall> pressure_relaxation(water_block_complex_relation);
+    Dynamics1Level<fluid_dynamics::Integration2ndHalfRiemannWithWall> density_relaxation(water_block_complex_relation);
+    InteractionWithUpdate<fluid_dynamics::DensitySummationFreeSurfaceComplex> update_density_by_summation(water_block_complex_relation);
     SimpleDynamics<TimeStepInitialization> initialize_a_fluid_step(water_block, makeShared<Gravity>(Vecd(0.0, -gravity_g)));
     ReduceDynamics<fluid_dynamics::AdvectionTimeStepSize> get_fluid_advection_time_step_size(water_block, U_f);
     ReduceDynamics<fluid_dynamics::AcousticTimeStepSize> get_fluid_time_step_size(water_block);
@@ -198,14 +193,14 @@ int main(int ac, char *av[])
     SimpleDynamics<OffsetInitialPosition> gate_offset_position(gate, offset);
     SimpleDynamics<NormalDirectionFromBodyShape> wall_boundary_normal_direction(wall_boundary);
     SimpleDynamics<NormalDirectionFromBodyShape> gate_normal_direction(gate);
-    InteractionWithUpdate<KernelCorrectionMatrixInner> gate_corrected_configuration(gate_inner);
-    InteractionDynamics<solid_dynamics::PressureForceAccelerationFromFluidRiemann> fluid_pressure_force_on_gate(gate_water_contact);
+    InteractionWithUpdate<KernelCorrectionMatrixInner> gate_corrected_configuration(gate_inner_relation);
+    InteractionDynamics<solid_dynamics::PressureForceAccelerationFromFluidRiemann> fluid_pressure_force_on_gate(gate_water_contact_relation);
     solid_dynamics::AverageVelocityAndAcceleration average_velocity_and_acceleration(gate);
     //----------------------------------------------------------------------
     //	Algorithms of Elastic dynamics.
     //----------------------------------------------------------------------
-    Dynamics1Level<solid_dynamics::Integration1stHalfPK2> gate_stress_relaxation_first_half(gate_inner);
-    Dynamics1Level<solid_dynamics::Integration2ndHalf> gate_stress_relaxation_second_half(gate_inner);
+    Dynamics1Level<solid_dynamics::Integration1stHalfPK2> gate_stress_relaxation_first_half(gate_inner_relation);
+    Dynamics1Level<solid_dynamics::Integration2ndHalf> gate_stress_relaxation_second_half(gate_inner_relation);
     ReduceDynamics<solid_dynamics::AcousticTimeStepSize> gate_computing_time_step_size(gate);
 
     BodyRegionByParticle gate_constraint_part(gate, makeShared<MultiPolygonShape>(createGateConstrainShape()));
@@ -214,10 +209,10 @@ int main(int ac, char *av[])
     //----------------------------------------------------------------------
     //	Define the methods for I/O operations and observations of the simulation.
     //----------------------------------------------------------------------
-    BodyStatesRecordingToPlt write_real_body_states_to_plt(sph_system.real_bodies_);
-    BodyStatesRecordingToVtp write_real_body_states_to_vtp(sph_system.real_bodies_);
+    BodyStatesRecordingToPlt write_real_body_states_to_plt(io_environment, sph_system.real_bodies_);
+    BodyStatesRecordingToVtp write_real_body_states_to_vtp(io_environment, sph_system.real_bodies_);
     RegressionTestDynamicTimeWarping<ObservedQuantityRecording<Vecd>>
-        write_beam_tip_displacement("Position", gate_observer_contact);
+        write_beam_tip_displacement("Position", io_environment, gate_observer_contact_relation);
     // TODO: observing position is not as good observing displacement.
     //----------------------------------------------------------------------
     //	Prepare the simulation with cell linked list, configuration
@@ -298,8 +293,8 @@ int main(int ac, char *av[])
             /** Update cell linked list and configuration. */
             water_block.updateCellLinkedListWithParticleSort(100);
             gate.updateCellLinkedList();
-            water_block_complex.updateConfiguration();
-            gate_water_contact.updateConfiguration();
+            water_block_complex_relation.updateConfiguration();
+            gate_water_contact_relation.updateConfiguration();
             /** Output the observed data. */
             write_beam_tip_displacement.writeToFile(number_of_iterations);
         }
@@ -321,6 +316,7 @@ int main(int ac, char *av[])
     {
         write_beam_tip_displacement.testResult();
     }
+
 
     return 0;
 }

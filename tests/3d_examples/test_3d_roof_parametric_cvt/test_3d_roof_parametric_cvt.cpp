@@ -14,19 +14,19 @@ using namespace SPH;
 
 Real to_rad(Real angle) { return angle * Pi / 180; }
 
-void relax_shell(RealBody &plate_body, Real thickness)
+void relax_shell(RealBody &plate_body, Real thickness, Real level_set_refinement_ratio)
 {
     // BUG: apparently only works if dp > thickness, otherwise ShellNormalDirectionPrediction::correctNormalDirection() throws error
 
     InnerRelation imported_model_inner(plate_body);
     SimpleDynamics<RandomizeParticlePosition> random_imported_model_particles(plate_body);
-    relax_dynamics::ShellRelaxationStep relaxation_step_inner(imported_model_inner);
+    relax_dynamics::ShellRelaxationStepInner relaxation_step_inner(imported_model_inner, thickness, level_set_refinement_ratio);
     relax_dynamics::ShellNormalDirectionPrediction shell_normal_prediction(imported_model_inner, thickness);
     //----------------------------------------------------------------------
     //	Particle relaxation starts here.
     //----------------------------------------------------------------------
     random_imported_model_particles.exec(0.25);
-    relaxation_step_inner.MidSurfaceBounding().exec();
+    relaxation_step_inner.mid_surface_bounding_.exec();
     plate_body.updateCellLinkedList();
     //----------------------------------------------------------------------
     //	Particle relaxation time stepping start here.
@@ -305,7 +305,6 @@ return_data roof_under_self_weight(Real dp, bool cvt = true, int particle_number
 
     // starting the actual simulation
     SPHSystem system(bb_system, dp);
-    system.setIOEnvironment(false);  
     SolidBody shell_body(system, shell_shape);
     shell_body.defineParticlesWithMaterial<ShellParticles>(material.get());
     if (cvt)
@@ -322,8 +321,9 @@ return_data roof_under_self_weight(Real dp, bool cvt = true, int particle_number
       // for (auto& mass: shell_particles->mass_) mass = total_area*rho / shell_particles->total_real_particles_;
     }
     // output
+    IOEnvironment io_env(system, false);
     shell_body.addBodyStateForRecording<Vec3d>("NormalDirection");
-    BodyStatesRecordingToVtp vtp_output({shell_body});
+    BodyStatesRecordingToVtp vtp_output(io_env, {shell_body});
     vtp_output.writeToFile(0);
     // observer points A & B
     point_A.neighbor_ids = [&]() { // only neighbors on the edges
@@ -385,7 +385,7 @@ return_data roof_under_self_weight(Real dp, bool cvt = true, int particle_number
 
     // TESTS on initialization
     // checking particle distances - avoid bugs of reading file
-    Real min_rij = MaxReal;
+    Real min_rij = Infinity;
     for (size_t index_i = 0; index_i < shell_particles->pos0_.size(); ++index_i)
     {
         Neighborhood &inner_neighborhood = shell_body_inner.inner_configuration_[index_i];

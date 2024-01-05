@@ -40,21 +40,22 @@ int main(int ac, char *av[])
     //	Build up -- a SPHSystem
     //----------------------------------------------------------------------
     SPHSystem sph_system(system_domain_bounds, dp_0);
-    sph_system.handleCommandlineOptions(ac, av)->setIOEnvironment();
+    sph_system.handleCommandlineOptions(ac, av);
+    IOEnvironment io_environment(sph_system);
     //----------------------------------------------------------------------
     //	Creating body, materials and particles.
     //----------------------------------------------------------------------
     RealBody imported_model(sph_system, makeShared<SolidBodyFromMesh>("SolidBodyFromMesh"));
     imported_model.defineAdaptation<ParticleRefinementNearSurface>(1.15, 1.0, 2);
-    imported_model.defineBodyLevelSetShape()->writeLevelSet(sph_system);
+    imported_model.defineBodyLevelSetShape()->writeLevelSet(io_environment);
     imported_model.defineParticlesAndMaterial();
     imported_model.generateParticles<ParticleGeneratorMultiResolution>();
     imported_model.addBodyStateForRecording<Real>("SmoothingLengthRatio");
     //----------------------------------------------------------------------
     //	Define simple file input and outputs functions.
     //----------------------------------------------------------------------
-    BodyStatesRecordingToVtp write_imported_model_to_vtp({imported_model});
-    MeshRecordingToPlt cell_linked_list_recording(sph_system, imported_model.getCellLinkedList());
+    BodyStatesRecordingToVtp write_imported_model_to_vtp(io_environment, {imported_model});
+    MeshRecordingToPlt cell_linked_list_recording(io_environment, imported_model.getCellLinkedList());
     //----------------------------------------------------------------------
     //	Define body relation map.
     //	The contact map gives the topological connections between the bodies.
@@ -71,7 +72,7 @@ int main(int ac, char *av[])
     SimpleDynamics<RandomizeParticlePosition> random_imported_model_particles(imported_model);
     /** A  Physics relaxation step. */
     // relax_dynamics::RelaxationStepInner relaxation_step_inner(imported_model_inner.get(), true);
-    relax_dynamics::RelaxationStepLevelSetCorrectionInner relaxation_step_inner(imported_model_inner);
+    relax_dynamics::RelaxationStepInner relaxation_step_inner(imported_model_inner, true);
     SimpleDynamics<relax_dynamics::UpdateSmoothingLengthRatioByShape> update_smoothing_length_ratio(imported_model);
     //----------------------------------------------------------------------
     //	Particle relaxation starts here.
@@ -98,6 +99,7 @@ int main(int ac, char *av[])
         }
     }
     std::cout << "The physics relaxation process of imported model finish !" << std::endl;
+
 
     return 0;
 }

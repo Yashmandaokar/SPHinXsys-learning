@@ -14,18 +14,6 @@ SPHSystem::SPHSystem(BoundingBox system_domain_bounds, Real resolution_ref, size
       io_environment_(nullptr), run_particle_relaxation_(false), reload_particles_(false),
       restart_step_(0), generate_regression_data_(false), state_recording_(true) {}
 //=================================================================================================//
-IOEnvironment &SPHSystem::getIOEnvironment()
-{
-    if (io_environment_ == nullptr)
-    {
-        std::cout << "\n Error: IO Environment not setup yet! \n";
-        std::cout << __FILE__ << ':' << __LINE__ << std::endl;
-        exit(1);
-    }
-    return *io_environment_;
-}
-//=================================================================================================//
-
 void SPHSystem::initializeSystemCellLinkedLists()
 {
     for (auto &body : real_bodies_)
@@ -47,7 +35,7 @@ void SPHSystem::initializeSystemConfigurations()
 //=================================================================================================//
 Real SPHSystem::getSmallestTimeStepAmongSolidBodies(Real CFL)
 {
-    Real dt = MaxReal;
+    Real dt = Infinity;
     for (size_t i = 0; i < solid_bodies_.size(); i++)
     {
         ReduceDynamics<solid_dynamics::AcousticTimeStepSize> computing_time_step_size(*solid_bodies_[i], CFL);
@@ -59,7 +47,7 @@ Real SPHSystem::getSmallestTimeStepAmongSolidBodies(Real CFL)
 }
 //=================================================================================================//
 #ifdef BOOST_AVAILABLE
-SPHSystem *SPHSystem::handleCommandlineOptions(int ac, char *av[])
+void SPHSystem::handleCommandlineOptions(int ac, char *av[])
 {
     try
     {
@@ -151,15 +139,7 @@ SPHSystem *SPHSystem::handleCommandlineOptions(int ac, char *av[])
     {
         std::cerr << "Exception of unknown type!\n";
     }
-
-    return this;
 }
 #endif
-//=================================================================================================//
-SPHSystem *SPHSystem::setIOEnvironment(bool delete_output)
-{
-    io_environment_ = io_ptr_keeper_.createPtr<IOEnvironment>(*this, delete_output);
-    return this;
-}
 //=================================================================================================//
 } // namespace SPH

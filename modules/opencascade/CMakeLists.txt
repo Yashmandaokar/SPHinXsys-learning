@@ -25,6 +25,5 @@ target_link_libraries(sphinxsys_opencascade PRIVATE TKSTEP TKSTEPAttr TKSTEP209 
 target_link_libraries(sphinxsys_opencascade PUBLIC TKG3d TKG2d TKMath TKernel) 
 
 if(SPHINXSYS_BUILD_TESTS)
-    enable_testing()
     add_subdirectory(tests)
 endif()

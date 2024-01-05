@@ -1,7 +1,7 @@
 /**
  * @file taylor_bar.cpp
  * @brief This is the case setup for plastic taylor bar.
- * @author Xiaojing Tang, Dong Wu and Xiangyu Hu
+ * @author Chi Zhang  and Xiangyu Hu
  * @ref 	doi.org/10.1007/s40571-019-00277-6
  */
 #include "sphinxsys.h"
@@ -15,8 +15,7 @@ int main(int ac, char *av[])
     /** Setup the system. Please the make sure the global domain bounds are correctly defined. */
     SPHSystem sph_system(system_domain_bounds, particle_spacing_ref);
     sph_system.setRunParticleRelaxation(false);
-    sph_system.setReloadParticles(true);
-    sph_system.setGenerateRegressionData(false);
+    sph_system.setReloadParticles(false);
 #ifdef BOOST_AVAILABLE
     sph_system.handleCommandlineOptions(ac, av);
 #endif
@@ -25,15 +24,15 @@ int main(int ac, char *av[])
     /** create a body with corresponding material, particles and reaction model. */
     SolidBody column(sph_system, makeShared<Column>("Column"));
     column.defineAdaptationRatios(1.3, 1.0);
-    column.defineBodyLevelSetShape()->writeLevelSet(sph_system);
+    column.defineBodyLevelSetShape()->writeLevelSet(io_environment);
     column.defineParticlesAndMaterial<ElasticSolidParticles, HardeningPlasticSolid>(
         rho0_s, Youngs_modulus, poisson, yield_stress, hardening_modulus);
     (!sph_system.RunParticleRelaxation() && sph_system.ReloadParticles())
-        ? column.generateParticles<ParticleGeneratorReload>(column.getName())
+        ? column.generateParticles<ParticleGeneratorReload>(io_environment, column.getName())
         : column.generateParticles<ParticleGeneratorLattice>();
     column.addBodyStateForRecording<Vecd>("NormalDirection");
 
-    SolidBody wall(sph_system, makeShared<WallShape>("Wall"));
+    SolidBody wall(sph_system, makeShared<Wall>("Wall"));
     wall.defineParticlesAndMaterial<SolidParticles, SaintVenantKirchhoffSolid>(rho0_s, Youngs_modulus, poisson);
     wall.generateParticles<ParticleGeneratorLattice>();
 
@@ -46,7 +45,7 @@ int main(int ac, char *av[])
     ContactRelation my_observer_contact(my_observer, {&column});
     SurfaceContactRelation column_wall_contact(column, {&wall});
     /**define simple data file input and outputs functions. */
-    BodyStatesRecordingToVtp write_states(sph_system.real_bodies_);
+    BodyStatesRecordingToVtp write_states(io_environment, sph_system.real_bodies_);
 
     if (sph_system.RunParticleRelaxation())
     {
@@ -56,10 +55,10 @@ int main(int ac, char *av[])
         /** Random reset the insert body particle position. */
         SimpleDynamics<RandomizeParticlePosition> random_column_particles(column);
         /** Write the body state to Vtp file. */
-        BodyStatesRecordingToVtp write_column_to_vtp(column);
+        BodyStatesRecordingToVtp write_column_to_vtp(io_environment, column);
         /** Write the particle reload files. */
 
-        ReloadParticleIO write_particle_reload_files(column);
+        ReloadParticleIO write_particle_reload_files(io_environment, column);
         /** A  Physics relaxation step. */
         relax_dynamics::RelaxationStepInner relaxation_step_inner(column_inner);
         /**
@@ -89,18 +88,20 @@ int main(int ac, char *av[])
     //----------------------------------------------------------------------
     //	All numerical methods will be used in this case.
     //----------------------------------------------------------------------
-    Dynamics1Level<solid_dynamics::DecomposedPlasticIntegration1stHalf> stress_relaxation_first_half(column_inner);
+    Dynamics1Level<solid_dynamics::PlasticIntegration1stHalf> stress_relaxation_first_half(column_inner);
     Dynamics1Level<solid_dynamics::Integration2ndHalf> stress_relaxation_second_half(column_inner);
     InteractionDynamics<solid_dynamics::DynamicContactForceWithWall> column_wall_contact_force(column_wall_contact);
     SimpleDynamics<NormalDirectionFromBodyShape> wall_normal_direction(wall);
     SimpleDynamics<InitialCondition> initial_condition(column);
     InteractionWithUpdate<KernelCorrectionMatrixInner> corrected_configuration(column_inner);
-    ReduceDynamics<solid_dynamics::AcousticTimeStepSize> computing_time_step_size(column, 0.2);
+    ReduceDynamics<solid_dynamics::AcousticTimeStepSize> computing_time_step_size(column, 0.3);
     //----------------------------------------------------------------------
     //	Output
     //----------------------------------------------------------------------
     RegressionTestDynamicTimeWarping<ObservedQuantityRecording<Vecd>>
-        write_displacement("Position", my_observer_contact);
+        write_velocity("Velocity", io_environment, my_observer_contact);
+    RegressionTestDynamicTimeWarping<ObservedQuantityRecording<Vecd>>
+        write_displacement("Position", io_environment, my_observer_contact);
 
     //----------------------------------------------------------------------
     // From here the time stepping begins.
@@ -128,6 +129,7 @@ int main(int ac, char *av[])
     //----------------------------------------------------------------------
     write_states.writeToFile();
     write_displacement.writeToFile(0);
+    write_velocity.writeToFile(0);
     //----------------------------------------------------------------------
     // Main time-stepping loop.
     //----------------------------------------------------------------------
@@ -145,6 +147,7 @@ int main(int ac, char *av[])
                 if (ite != 0 && ite % observation_sample_interval == 0)
                 {
                     write_displacement.writeToFile(ite);
+                    write_velocity.writeToFile(ite);
                 }
             }
             column_wall_contact_force.exec(dt);
@@ -168,16 +171,10 @@ int main(int ac, char *av[])
 
     TimeInterval tt;
     tt = t4 - t1 - interval;
-    std::cout << "Total wall time for computation: " << tt.seconds() << " seconds." << std::endl; 
+    std::cout << "Total wall time for computation: " << tt.seconds() << " seconds." << std::endl;
 
-    if (sph_system.GenerateRegressionData())
-    {
-        write_displacement.generateDataBase(0.1);
-    }
-    else
-    {
-        write_displacement.testResult();
-    }
+    write_displacement.testResult();
+    write_velocity.testResult();
 
 
     return 0;
