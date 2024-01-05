@@ -64,7 +64,7 @@ int main(int ac, char *av[])
     //----------------------------------------------------------------------
     size_t number_of_iterations = 0;
     int screen_output_interval = 1000;
-    Real end_time = 0.2;
+    Real end_time = 0.1;
     Real output_interval = 0.01; /**< time stamps for output. */
     //----------------------------------------------------------------------
     //	Statistics for CPU time
