@@ -17,6 +17,7 @@ EulerianIntegration1stHalf<RiemannSolverType>::
     particles_->registerVariable(mom_, "Momentum");
     particles_->registerVariable(dmom_dt_, "MomentumChangeRate");
 }
+
 //=================================================================================================//
 template <class RiemannSolverType>
 void EulerianIntegration1stHalf<RiemannSolverType>::interaction(size_t index_i, Real dt)
@@ -38,6 +39,7 @@ void EulerianIntegration1stHalf<RiemannSolverType>::interaction(size_t index_i, 
     }
     dmom_dt_[index_i] = momentum_change_rate;
 }
+
 //=================================================================================================//
 template <class RiemannSolverType>
 void EulerianIntegration1stHalf<RiemannSolverType>::update(size_t index_i, Real dt)

@@ -129,7 +129,7 @@ namespace SPH
             check_neighbor_cell1 = false;
             check_neighbor_cell2 = true;
             return;
-        } 
+        }
         else
         {
             check_neighbor_cell1 = false;

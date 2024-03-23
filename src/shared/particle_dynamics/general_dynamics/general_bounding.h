@@ -57,7 +57,7 @@ class BoundingAlongAxis : public BaseDynamics<void>,
 
 /**
  * @class BasePeriodicCondition
- * @brief Base class for two different type periodic boundary conditions.
+ * @brief Base class for two different type periodic .
  */
 template <class ExecutionPolicy>
 class BasePeriodicCondition

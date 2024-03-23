@@ -23,8 +23,8 @@ namespace SPH
                 //----------------------------------------------------------------------
                 //		register geometric data only
                 //----------------------------------------------------------------------
-                registerVariable(b_n_, "BinormalDirection");
-                registerVariable(width_, "Width");
+                (b_n_, "BinormalDirection");
+                (width_, "Width");
                 /**
                  * add particle reload data
                  */
@@ -38,23 +38,23 @@ namespace SPH
                 /**
                  * register particle data
                  */
-                registerVariable(b_n0_, "InitialBinormalDirection",
+                (b_n0_, "InitialBinormalDirection",
                                  [&](size_t i) -> Vecd
                                  { return b_n_[i]; });
-                registerVariable(pseudo_b_n_, "PseudoBinormal",
+                (pseudo_b_n_, "PseudoBinormal",
                                  [&](size_t i) -> Vecd
                                  { return pseudo_b_n_[i]; });
-                registerVariable(dpseudo_b_n_dt_, "PseudoBinormalChangeRate");
-                registerVariable(dpseudo_b_n_d2t_, "PseudoBinormal2ndOrderTimeDerivative");
-                registerVariable(rotation_b_, "Rotation_b");
-                registerVariable(angular_b_vel_, "AngularVelocity_b");
-                registerVariable(dangular_b_vel_dt_, "AngularAccelerationofBinormal");
-                registerVariable(F_b_bending_, "b_BendingDeformationGradient");
-                registerVariable(dF_b_bending_dt_, "b_BendingDeformationGradientChangeRate");
+                (dpseudo_b_n_dt_, "PseudoBinormalChangeRate");
+                (dpseudo_b_n_d2t_, "PseudoBinormal2ndOrderTimeDerivative");
+                (rotation_b_, "Rotation_b");
+                (angular_b_vel_, "AngularVelocity_b");
+                (dangular_b_vel_dt_, "AngularAccelerationofBinormal");
+                (F_b_bending_, "b_BendingDeformationGradient");
+                (dF_b_bending_dt_, "b_BendingDeformationGradientChangeRate");
 
-                registerVariable(global_b_shear_stress_, "Global_b_ShearStress");
-                registerVariable(global_b_stress_, "Global_b_Stress");
-                registerVariable(global_b_moment_, "Global_b_Moment");
+                (global_b_shear_stress_, "Global_b_ShearStress");
+                (global_b_stress_, "Global_b_Stress");
+                (global_b_moment_, "Global_b_Moment");
 
                 /**
                  * for rotation.

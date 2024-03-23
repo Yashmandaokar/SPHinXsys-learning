@@ -11,7 +11,7 @@ case name: test_2d_diffusion_NeumannBC
 """
 
 case_name = "test_2d_diffusion_NeumannBC"
-body_name = "TemperatureObserver"
+body_name = "Observer"
 parameter_name = "Phi"
 
 number_of_run_times = 0

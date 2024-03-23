@@ -15,7 +15,7 @@ Real DL_sponge = resolution_ref * 20.0; /**< Sponge region to impose inflow cond
 /** Boundary width, determined by specific layer of boundary particles. */
 Real BW = resolution_ref * 4.0; /** Domain bounds of the system. */
 BoundingBox system_domain_bounds(Vec2d(-DL_sponge - BW, -BW), Vec2d(DL + BW, DH + BW));
-// temperature observer location
+//  observer location
 StdVec<Vecd> observation_location = {Vecd(0.0, DH * 0.5)};
 //----------------------------------------------------------------------
 //	Global parameters on the material properties
@@ -235,8 +235,8 @@ int main(int ac, char *av[])
     thermosolid_body.defineParticlesAndMaterial<DiffusionSolidParticles, ThermosolidBodyMaterial>();
     thermosolid_body.generateParticles<ParticleGeneratorLattice>();
 
-    ObserverBody temperature_observer(sph_system, "FluidObserver");
-    temperature_observer.generateParticles<ObserverParticleGenerator>(observation_location);
+    ObserverBody _observer(sph_system, "FluidObserver");
+    _observer.generateParticles<ObserverParticleGenerator>(observation_location);
     //----------------------------------------------------------------------
     //	Define body relation map.
     //	The contact map gives the topological connections between the bodies.
@@ -249,7 +249,7 @@ int main(int ac, char *av[])
     InnerRelation solid_body_inner(thermosolid_body);
     ContactRelation fluid_wall_contact_Dirichlet(thermofluid_body, {&thermosolid_body});
     ComplexRelation fluid_body_complex(fluid_body_inner, {&thermosolid_body});
-    ContactRelation fluid_observer_contact(temperature_observer, {&thermofluid_body});
+    ContactRelation fluid_observer_contact(_observer, {&thermofluid_body});
     //----------------------------------------------------------------------
     //	Define the main numerical methods used in the simulation.
     //	Note that there may be data dependence on the constructors of these methods.

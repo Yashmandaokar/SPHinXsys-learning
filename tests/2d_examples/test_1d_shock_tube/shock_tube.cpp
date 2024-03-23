@@ -51,12 +51,12 @@ class ShockTubeInitialCondition
         : FluidInitialCondition(sph_body), pos_(particles_->pos_), vel_(particles_->vel_),
           rho_(particles_->rho_), p_(*particles_->getVariableByName<Real>("Pressure"))
     {
-        particles_->registerVariable(mom_, "Momentum");
-        particles_->registerVariable(dmom_dt_, "MomentumChangeRate");
-        particles_->registerVariable(dmom_dt_prior_, "OtherMomentumChangeRate");
-        particles_->registerVariable(E_, "TotalEnergy");
-        particles_->registerVariable(dE_dt_, "TotalEnergyChangeRate");
-        particles_->registerVariable(dE_dt_prior_, "OtherEnergyChangeRate");
+        particles_->(mom_, "Momentum");
+        particles_->(dmom_dt_, "MomentumChangeRate");
+        particles_->(dmom_dt_prior_, "OtherMomentumChangeRate");
+        particles_->(E_, "TotalEnergy");
+        particles_->(dE_dt_, "TotalEnergyChangeRate");
+        particles_->(dE_dt_prior_, "OtherEnergyChangeRate");
         gamma_ = heat_capacity_ratio;
     };
     void update(size_t index_i, Real dt)

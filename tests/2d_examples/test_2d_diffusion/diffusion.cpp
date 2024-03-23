@@ -92,10 +92,10 @@ class DiffusionBodyRelaxation
 //----------------------------------------------------------------------
 //	An observer particle generator.
 //----------------------------------------------------------------------
-class TemperatureObserverParticleGenerator : public ObserverParticleGenerator
+class ObserverParticleGenerator : public ObserverParticleGenerator
 {
   public:
-    explicit TemperatureObserverParticleGenerator(SPHBody &sph_body)
+    explicit ObserverParticleGenerator(SPHBody &sph_body)
         : ObserverParticleGenerator(sph_body)
     {
         size_t number_of_observation_points = 11;
@@ -129,8 +129,8 @@ int main(int ac, char *av[])
     //----------------------------------------------------------------------
     //	Particle and body creation of fluid observers.
     //----------------------------------------------------------------------
-    ObserverBody temperature_observer(sph_system, "TemperatureObserver");
-    temperature_observer.generateParticles<TemperatureObserverParticleGenerator>();
+    ObserverBody _observer(sph_system, "Observer");
+    _observer.generateParticles<ObserverParticleGenerator>();
     //----------------------------------------------------------------------
     //	Define body relation map.
     //	The contact map gives the topological connections between the bodies.
@@ -140,7 +140,7 @@ int main(int ac, char *av[])
     //  inner and contact relations.
     //----------------------------------------------------------------------
     InnerRelation diffusion_body_inner_relation(diffusion_body);
-    ContactRelation temperature_observer_contact(temperature_observer, {&diffusion_body});
+    ContactRelation _observer_contact(_observer, {&diffusion_body});
     //----------------------------------------------------------------------
     //	Define the main numerical methods used in the simulation.
     //	Note that there may be data dependence on the constructors of these methods.
@@ -155,7 +155,7 @@ int main(int ac, char *av[])
     //----------------------------------------------------------------------
     BodyStatesRecordingToVtp write_states(io_environment, sph_system.real_bodies_);
     RegressionTestEnsembleAverage<ObservedQuantityRecording<Real>>
-        write_solid_temperature("Phi", io_environment, temperature_observer_contact);
+        write_solid_("Phi", io_environment, _observer_contact);
     //----------------------------------------------------------------------
     //	Prepare the simulation with cell linked list, configuration
     //	and case specified initial condition if necessary.
@@ -183,7 +183,7 @@ int main(int ac, char *av[])
     //	First output before the main loop.
     //----------------------------------------------------------------------
     write_states.writeToFile();
-    write_solid_temperature.writeToFile();
+    write_solid_.writeToFile();
     //----------------------------------------------------------------------
     //	Main loop starts here.
     //----------------------------------------------------------------------
@@ -214,7 +214,7 @@ int main(int ac, char *av[])
 
         TickCount t2 = TickCount::now();
         write_states.writeToFile();
-        write_solid_temperature.writeToFile(ite);
+        write_solid_.writeToFile(ite);
         TickCount t3 = TickCount::now();
         interval += t3 - t2;
     }
@@ -224,7 +224,7 @@ int main(int ac, char *av[])
     tt = t4 - t1 - interval;
     std::cout << "Total wall time for computation: " << tt.seconds() << " seconds." << std::endl;
 
-    write_solid_temperature.testResult();
+    write_solid_.testResult();
 
     return 0;
 }

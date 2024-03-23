@@ -1,6 +1,6 @@
 /**
  * @file 	VP_problem1_non_optimized
- * @brief 	This is the steady test for the same sink (2/10) temperature.
+ * @brief 	This is the steady test for the same sink (2/10) .
  * @author 	Bo Zhang and Xiangyu Hu
  */
 #include "sphinxsys.h" //SPHinXsys Library
@@ -22,9 +22,9 @@ std::array<std::string, 1> species_name_list{ "Phi" };
 //----------------------------------------------------------------------
 //	Initial and boundary conditions.
 //----------------------------------------------------------------------
-Real initial_temperature = 0.0;
-Real high_temperature = 300.0;
-Real low_temperature = 300.0;
+Real initial_ = 0.0;
+Real high_ = 300.0;
+Real low_ = 300.0;
 Real heat_source = 1000.0;
 //----------------------------------------------------------------------
 //	Geometric shapes used in the system.
@@ -131,21 +131,21 @@ public:
 		all_species_[phi_][index_i] = -0.0;
 		if (pos_[index_i][1] < 0 && pos_[index_i][00] > 0.4 * L && pos_[index_i][0] < 0.6 * L)
 		{
-			all_species_[phi_][index_i] = low_temperature;
+			all_species_[phi_][index_i] = low_;
 		}
 		if (pos_[index_i][1] > 1 && pos_[index_i][0] > 0.4 * L && pos_[index_i][0] < 0.6 * L)
 		{
-			all_species_[phi_][index_i] = high_temperature;
+			all_species_[phi_][index_i] = high_;
 		}
 	};
 };
 //----------------------------------------------------------------------
-//	An observer body to measure temperature at given positions. 
+//	An observer body to measure  at given positions. 
 //----------------------------------------------------------------------
-class TemperatureObserverParticleGenerator : public ObserverParticleGenerator
+class ObserverParticleGenerator : public ObserverParticleGenerator
 {
 public:
-	TemperatureObserverParticleGenerator(SPHBody& sph_body)
+	ObserverParticleGenerator(SPHBody& sph_body)
 		: ObserverParticleGenerator(sph_body)
 	{
 		/** A line of measuring points at the middle line. */
@@ -182,32 +182,32 @@ TEST(test_optimization, test_problem1_non_optimized)
 	wall_boundary.defineParticlesAndMaterial<WallParticles, DiffusionMaterial>();
 	wall_boundary.generateParticles<ParticleGeneratorLattice>();
 	//----------------------------  ------------------------------------------
-	//	Particle and body creation of temperature observers.
+	//	Particle and body creation of  observers.
 	//----------------------------------------------------------------------
-	ObserverBody temperature_observer(sph_system, "TemperatureObserver");
-	temperature_observer.generateParticles<TemperatureObserverParticleGenerator>();
+	ObserverBody _observer(sph_system, "Observer");
+	_observer.generateParticles<ObserverParticleGenerator>();
 	//----------------------------------------------------------------------
 	//	Define body relation map.
 	//	The contact map gives the topological connections between the bodies.
 	//	Basically the range of bodies to build neighbor particle lists.
 	ComplexRelation diffusion_body_complex(diffusion_body, { &wall_boundary });
-	ContactRelation temperature_observer_contact(temperature_observer, { &diffusion_body });
+	ContactRelation _observer_contact(_observer, { &diffusion_body });
 	//----------------------------------------------------------------------
 	//	Define the main numerical methods used in the simulation.
 	//	Note that there may be data dependence on the constructors of these methods.
 	//----------------------------------------------------------------------
-	InteractionSplit<TemperatureSplittingByPDEWithBoundary<DiffusionParticles, WallParticles, Real>>
-		temperature_splitting(diffusion_body_complex, "Phi");
+	InteractionSplit<SplittingByPDEWithBoundary<DiffusionParticles, WallParticles, Real>>
+		_splitting(diffusion_body_complex, "Phi");
 	GetDiffusionTimeStepSize<DiffusionParticles> get_time_step_size(diffusion_body);
 	SimpleDynamics<DiffusionBodyInitialCondition> setup_diffusion_initial_condition(diffusion_body);
 	SimpleDynamics<WallBoundaryInitialCondition> setup_boundary_condition(wall_boundary);
-	ReduceAverage<SpeciesSummation<SPHBody, DiffusionParticles>> calculate_averaged_temperature(diffusion_body, "Phi");
+	ReduceAverage<SpeciesSummation<SPHBody, DiffusionParticles>> calculate_averaged_(diffusion_body, "Phi");
 	//----------------------------------------------------------------------
 	//	Define the methods for I/O operations and observations of the simulation.
 	//----------------------------------------------------------------------
 	BodyStatesRecordingToVtp write_states(io_environment, sph_system.real_bodies_);
 	RestartIO	restart_io(io_environment, sph_system.real_bodies_);
-	ObservedQuantityRecording<Real> write_solid_temperature("Phi", io_environment, temperature_observer_contact);
+	ObservedQuantityRecording<Real> write_solid_("Phi", io_environment, _observer_contact);
 	//----------------------------------------------------------------------
 	//	Prepare the simulation with cell linked list, configuration
 	//	and case specified initial condition if necessary. 
@@ -233,7 +233,7 @@ TEST(test_optimization, test_problem1_non_optimized)
 	Real End_Time = T0;
 	int restart_output_interval = 1000;
 	Real dt = 0.0;
-	Real current_averaged_temperature = 0.0;
+	Real current_averaged_ = 0.0;
 	//----------------------------------------------------------------------
 	//	Statistics for CPU time
 	//----------------------------------------------------------------------
@@ -242,8 +242,8 @@ TEST(test_optimization, test_problem1_non_optimized)
 	//----------------------------------------------------------------------
 	//	Main loop starts here.
 	//----------------------------------------------------------------------
-	std::string filefullpath_nonopt_temperature = io_environment.output_folder_ + "/" + "nonopt_temperature.dat";
-	std::ofstream out_file_nonopt_temperature(filefullpath_nonopt_temperature.c_str(), std::ios::app);
+	std::string filefullpath_nonopt_ = io_environment.output_folder_ + "/" + "nonopt_.dat";
+	std::ofstream out_file_nonopt_(filefullpath_nonopt_.c_str(), std::ios::app);
 
 	while (GlobalStaticVariables::physical_time_ < End_Time)
 	{
@@ -251,16 +251,16 @@ TEST(test_optimization, test_problem1_non_optimized)
 		if (ite % 500 == 0)
 		{
 			write_states.writeToFile(ite);
-			write_solid_temperature.writeToFile(ite);
+			write_solid_.writeToFile(ite);
 
-			current_averaged_temperature = calculate_averaged_temperature.exec();
-			out_file_nonopt_temperature << std::fixed << std::setprecision(12) << ite << "   " << current_averaged_temperature << "\n";
+			current_averaged_ = calculate_averaged_.exec();
+			out_file_nonopt_ << std::fixed << std::setprecision(12) << ite << "   " << current_averaged_ << "\n";
 
 			std::cout << "N= " << ite << " Time: " << GlobalStaticVariables::physical_time_ << "	dt: " << dt << "\n";
-			std::cout << "The averaged temperature is " << calculate_averaged_temperature.exec() << std::endl;
+			std::cout << "The averaged  is " << calculate_averaged_.exec() << std::endl;
 		}
 
-		temperature_splitting.exec(dt);
+		_splitting.exec(dt);
 		ite++; GlobalStaticVariables::physical_time_ += dt;
 
 		if (ite % restart_output_interval == 0)
@@ -274,7 +274,7 @@ TEST(test_optimization, test_problem1_non_optimized)
 	std::cout << "Total wall time for computation: " << tt.seconds() << " seconds." << std::endl;
 	std::cout << "Total physical time for computation: " << GlobalStaticVariables::physical_time_ << " seconds." << std::endl;
 
-	EXPECT_NEAR(619.124, calculate_averaged_temperature.exec(), 0.01);
+	EXPECT_NEAR(619.124, calculate_averaged_.exec(), 0.01);
 }
 
 int main(int argc, char* argv[])

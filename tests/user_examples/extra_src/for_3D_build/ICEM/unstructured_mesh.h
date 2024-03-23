@@ -69,6 +69,22 @@ class readMeshFile_3d
     double min_distance_between_nodes_;
 };
 
+
+class BaseInnerRelationInFVM : public BaseInnerRelation
+{
+  protected:
+    virtual void resetNeighborhoodCurrentSize();
+
+  public:
+    RealBody *real_body_;
+    vector<vector<vector<size_t>>> all_needed_data_from_mesh_file_;
+    vector<vector<Real>> nodes_coordinates_;
+    explicit BaseInnerRelationInFVM(RealBody &real_body, vector<vector<vector<size_t>>> data_inpute, vector<vector<Real>> nodes_coordinates);
+    virtual ~BaseInnerRelationInFVM(){};
+
+    virtual void resizeConfiguration() override;
+};
+
 class ParticleGeneratorInFVM : public ParticleGenerator
 {
   public:
@@ -83,6 +99,72 @@ class ParticleGeneratorInFVM : public ParticleGenerator
     StdLargeVec<Vecd> elements_center_coordinates_;
     StdLargeVec<Real> elements_volumes_;
 };
+
+/**
+ * @class NeighborBuilderInFVM
+ * @brief Base neighbor relation between particles i and j.
+ */
+class NeighborBuilderInFVM
+{
+  protected:
+    Kernel *kernel_;
+    //----------------------------------------------------------------------
+    //	Below are for constant smoothing length.
+    //----------------------------------------------------------------------
+    void createRelation(Neighborhood &neighborhood, Real &distance, Real &dW_ijV_j, Vecd &interface_normal_direction, size_t j_index) const;
+    void initializeRelation(Neighborhood &neighborhood, Real &distance, Real &dW_ijV_j,
+                            Vecd &interface_normal_direction, size_t j_index) const;
+
+  public:
+    NeighborBuilderInFVM() : kernel_(nullptr){};
+    virtual ~NeighborBuilderInFVM(){};
+};
+
+/**
+ * @class NeighborBuilderInnerInFVM
+ * @brief A inner neighbor builder functor in FVM.
+ */
+class NeighborBuilderInnerInFVM : public NeighborBuilderInFVM
+{
+  public:
+    explicit NeighborBuilderInnerInFVM(SPHBody *body) : NeighborBuilderInFVM(){};
+    void operator()(Neighborhood &neighborhood, Real &distance,
+                    Real &dW_ijV_j, Vecd &interface_normal_direction, size_t j_index) const
+    {
+        neighborhood.current_size_ >= neighborhood.allocated_size_
+            ? createRelation(neighborhood, distance, dW_ijV_j, interface_normal_direction, j_index)
+            : initializeRelation(neighborhood, distance, dW_ijV_j, interface_normal_direction, j_index);
+        neighborhood.current_size_++;
+    };
+};
+
+/** a small functor for obtaining particle index for container index */
+struct SPHBodyParticlesIndex
+{
+    size_t operator()(size_t particle_index) const { return particle_index; };
+};
+
+/**
+ * @class InnerRelationInFVM
+ * @brief The first concrete relation within a SPH body
+ */
+class InnerRelationInFVM : public BaseInnerRelationInFVM
+{
+  protected:
+    SPHBodyParticlesIndex get_particle_index_;
+    NeighborBuilderInnerInFVM get_inner_neighbor_;
+
+  public:
+    explicit InnerRelationInFVM(RealBody &real_body, vector<vector<vector<size_t>>> data_inpute, vector<vector<Real>> nodes_coordinates);
+    virtual ~InnerRelationInFVM(){};
+
+    /** generalized particle search algorithm */
+    template <typename GetParticleIndex, typename GetNeighborRelation>
+    void searchNeighborsByParticles(size_t total_real_particles, BaseParticles &source_particles,
+                                    ParticleConfiguration &particle_configuration, GetParticleIndex &get_particle_index, GetNeighborRelation &get_neighbor_relation);
+    virtual void updateConfiguration() override;
+};
+
 
 /**
  * @class BaseGhostCreation
@@ -137,7 +219,7 @@ class GhostCreationFromMesh : public GeneralDataDelegateSimple
                     Vecd node1_position = Vecd(nodes_coordinates_[node1_index][0], nodes_coordinates_[node1_index][1], nodes_coordinates_[node1_index][2]);
                     Vecd node2_position = Vecd(nodes_coordinates_[node2_index][0], nodes_coordinates_[node2_index][1], nodes_coordinates_[node2_index][2]);
                     Vecd node3_position = Vecd(nodes_coordinates_[node3_index][0], nodes_coordinates_[node3_index][1], nodes_coordinates_[node3_index][2]);
-                    Vecd ghost_particle_position = (1/3) * (node1_position + node2_position + node3_position);
+                    Vecd ghost_particle_position = (1.0/3.0) * (node1_position + node2_position + node3_position);
 
                     all_needed_data_from_mesh_file_[index_i][neighbor_index][0] = ghost_particle_index + 1;
                     ghost_particles_[0].push_back(ghost_particle_index);
@@ -151,13 +233,17 @@ class GhostCreationFromMesh : public GeneralDataDelegateSimple
                     std::vector<size_t> sub_element1 = {index_i + 1, boundary_type, node1_index, node2_index, node3_index};
                     new_element.push_back(sub_element1);
 
-                    // Add (corresponding_index_i,boundary_type,node1_index,node2_index) to the new element
+                    // Add (correspon ding_index_i,boundary_type,node1_index,node2_index) to the new element
                     std::vector<size_t> sub_element2 = {index_i + 1, boundary_type, node1_index, node2_index, node3_index};
                     new_element.push_back(sub_element2);
 
                     // Add (corresponding_index_i,boundary_type,node1_index,node2_index) to the new element
                     std::vector<size_t> sub_element3 = {index_i + 1, boundary_type, node1_index, node2_index, node3_index};
                     new_element.push_back(sub_element3);
+
+                    // Add (corresponding_index_i,boundary_type,node1_index,node2_index) to the new element
+                    std::vector<size_t> sub_element4 = { index_i + 1, boundary_type, node1_index, node2_index, node3_index };
+                    new_element.push_back(sub_element4);
 
                     // Add the new element to all_needed_data_from_mesh_file_
                     all_needed_data_from_mesh_file_.push_back(new_element);
@@ -172,22 +258,18 @@ class GhostCreationFromMesh : public GeneralDataDelegateSimple
                     // creating the boundary files with ghost eij
                     Vecd interface_area_vector1 = node2_position - node1_position;
                     Vecd interface_area_vector2 = node3_position - node1_position;
-                    Vecd area_vector = interface_area_vector1.cross(interface_area_vector2);
-                    Real area = 0.5*area_vector.norm();
+                    Vecd normal_vector = interface_area_vector1.cross(interface_area_vector2);
+                    Real magnitude = normal_vector.norm();
                     //Real interface_area_size = interface_area_vector.norm();
-                    Vecd unit_vector = area_vector / area;
-                    Vecd reference_vector(1.0, 0.0, 0.0);       //Take care that this is not parallel to other unit vectors
-                    // normal unit vector
-                    Vecd normal_vector = unit_vector.cross(reference_vector);
-                    //Vecd normal_vector = Vecd(unit_vector[1], -unit_vector[0]);
+                    Vecd normalized_normal_vector = normal_vector / magnitude;
                     // judge the direction
                     Vecd particle_position = pos_[index_i];
-                    Vecd node1_to_center_direction = particle_position - node1_position; // Not sure abot this
-                    if (node1_to_center_direction.dot(normal_vector) < 0)
+                    Vecd node1_to_center_direction = particle_position - node1_position;
+                    if (node1_to_center_direction.dot(normalized_normal_vector) < 0)
                     {
-                        normal_vector = -normal_vector;
+                        normalized_normal_vector = -normalized_normal_vector;
                     };
-                    each_boundary_type_with_all_ghosts_eij_[boundary_type].push_back(normal_vector);
+                    each_boundary_type_with_all_ghosts_eij_[boundary_type].push_back(normalized_normal_vector);
                 }
             }
         }

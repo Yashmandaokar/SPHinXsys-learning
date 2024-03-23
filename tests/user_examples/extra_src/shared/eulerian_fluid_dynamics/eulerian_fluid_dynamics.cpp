@@ -24,6 +24,19 @@ FluidStarState EulerianAcousticRiemannSolver::getInterfaceState(const FluidState
     return interface_state;
 }
 //=================================================================================================//
+        FluidStarState NoRiemannSolverInCompressobleEulerianMethod::getInterfaceState(const FluidState &state_i, const FluidState &state_j, const Vecd &e_ij)
+        {
+            Real p_star = 0.5 * (state_i.p_ + state_j.p_);
+            Vecd v_star = 0.5 * (state_i.vel_ + state_j.vel_);
+            Real rho_star = 0.5 * (state_i.rho_ + state_j.rho_);
+
+            FluidStarState interface_state(v_star, p_star);
+            interface_state.vel_ = v_star;
+            interface_state.p_ = p_star;
+          
+            return interface_state;
+        }
+//=================================================================================================//
 SmearedSurfaceIndication::SmearedSurfaceIndication(BaseInnerRelation &inner_relation)
     : LocalDynamics(inner_relation.getSPHBody()), FluidDataInner(inner_relation),
       indicator_(*particles_->getVariableByName<int>("Indicator")),

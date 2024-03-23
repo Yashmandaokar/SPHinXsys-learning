@@ -146,7 +146,7 @@ int main(int ac, char *av[])
     Dynamics1Level<fluid_dynamics::Integration2ndHalfWithWall> density_relaxation(water_block_complex);
     /** Computing viscous acceleration. */
     InteractionDynamics<fluid_dynamics::ViscousAccelerationWithWall> viscous_acceleration(water_block_complex);
-    /** Apply transport velocity formulation. */
+    /** Apply locity formulation. */
     InteractionDynamics<fluid_dynamics::TransportVelocityCorrectionComplexAdaptive>
         transport_velocity_correction(water_block_complex);
     /** compute the vorticity. */

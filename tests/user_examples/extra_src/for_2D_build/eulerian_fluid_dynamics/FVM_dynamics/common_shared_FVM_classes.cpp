@@ -558,7 +558,7 @@ void InnerRelationInFVM::searchNeighborsByParticles(size_t total_particles, Base
                     // boundary_type == 3 means fulid particle with wall boundary
                     if ((boundary_type == 3) | (boundary_type == 4) | (boundary_type == 9) | (boundary_type == 10) | (boundary_type == 36))
                     {
-                        r_ij = node1_to_center_direction.dot(normal_vector) * 2.0;
+                        r_ij = node1_to_center_direction.dot(normal_vector) * 2.0; // why * 2?
                     }
                     Real dW_ijV_j = -interface_area_size / (2.0 * Vol_i);
                     get_neighbor_relation(neighborhood, r_ij, dW_ijV_j, normal_vector, index_j);

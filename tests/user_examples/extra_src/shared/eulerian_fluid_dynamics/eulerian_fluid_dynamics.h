@@ -54,6 +54,17 @@ class EulerianAcousticRiemannSolver
     FluidStarState getInterfaceState(const FluidState &state_i, const FluidState &state_j, const Vecd &e_ij);
 };
 
+class NoRiemannSolverInCompressobleEulerianMethod 
+        {
+            Fluid& fluid_i_, & fluid_j_;
+            Real limiter_parameter_;
+            
+            public:
+            NoRiemannSolverInCompressobleEulerianMethod(Fluid &fluid_i, Fluid &fluid_j, Real limiter_parameter = 15.0)
+            : fluid_i_(fluid_i), fluid_j_(fluid_j), limiter_parameter_(limiter_parameter){};
+            FluidStarState getInterfaceState(const FluidState &state_i, const FluidState &state_j, const Vecd &e_ij);   
+        };
+
 /**
  * @class WeaklyCompressibleFluidInitialCondition
  * @brief  Set initial condition for a Eulerian weakly compressible fluid body.
@@ -64,8 +75,7 @@ class WeaklyCompressibleFluidInitialCondition : public FluidInitialCondition
   public:
     explicit WeaklyCompressibleFluidInitialCondition(SPHBody &sph_body)
         : FluidInitialCondition(sph_body), rho_(particles_->rho_),
-          p_(*particles_->getVariableByName<Real>("Pressure")),
-          mom_(*particles_->getVariableByName<Vecd>("Momentum")){};
+          p_(*particles_->getVariableByName<Real>("Pressure")), mom_(*particles_->getVariableByName<Vecd>("Momentum")){};
 
   protected:
     StdLargeVec<Real> &rho_, &p_;
@@ -94,6 +104,8 @@ class EulerianIntegration1stHalf : public BaseIntegration
 };
 /** define the mostly used pressure relaxation scheme using Riemann solver */
 using EulerianIntegration1stHalfAcousticRiemann = EulerianIntegration1stHalf<EulerianAcousticRiemannSolver>;
+using EulerianIntegration1stHalNoRiemannSolver = EulerianIntegration1stHalf<NoRiemannSolverInCompressobleEulerianMethod>;
+
 
 /**
  * @class EulerianIntegration1stHalfWithWall
@@ -135,6 +147,7 @@ class EulerianIntegration2ndHalf : public BaseIntegration
     RiemannSolverType riemann_solver_;
 };
 using EulerianIntegration2ndHalfAcousticRiemann = EulerianIntegration2ndHalf<EulerianAcousticRiemannSolver>;
+using EulerianIntegration2ndHalNoRiemannSolver = EulerianIntegration2ndHalf<NoRiemannSolverInCompressobleEulerianMethod>;
 
 /**
  * @class EulerianIntegration2ndHalfWithWall

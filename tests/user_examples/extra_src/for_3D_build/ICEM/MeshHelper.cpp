@@ -313,18 +313,7 @@ namespace SPH
 
     void MeshFileHelpers::updateBoundaryCellLists(vector<vector<vector<size_t>>>& cell_lists_, vector<vector<size_t>>& elements_nodes_connection_, Vecd nodes, Vec2d cells, bool& check_neighbor_cell1, bool& check_neighbor_cell2, size_t boundary_type)
     {
-        if (cell_lists_[cells[check_neighbor_cell2]][0][0] != cells[check_neighbor_cell1] && cell_lists_[cells[check_neighbor_cell2]][1][0] != cells[check_neighbor_cell1] && cell_lists_[cells[check_neighbor_cell2]][2][0] == static_cast<std::decay_t<decltype(elements_nodes_connection_[0][0])>>(0) && cell_lists_[cells[check_neighbor_cell2]][3][0] == static_cast<std::decay_t<decltype(elements_nodes_connection_[0][0])>>(-1))
-        {
-            cell_lists_[cells[check_neighbor_cell2]][3][0] = cells[check_neighbor_cell1];
-            cell_lists_[cells[check_neighbor_cell2]][3][1] = boundary_type;
-            cell_lists_[cells[check_neighbor_cell2]][3][2] = nodes[0];
-            cell_lists_[cells[check_neighbor_cell2]][3][3] = nodes[1];
-            cell_lists_[cells[check_neighbor_cell2]][3][4] = nodes[2];
-            check_neighbor_cell1 = false;
-            check_neighbor_cell2 = true;
-            return;
-        }
-        if (cell_lists_[cells[check_neighbor_cell2]][0][0] != cells[check_neighbor_cell1] && cell_lists_[cells[check_neighbor_cell2]][1][0] == static_cast<std::decay_t<decltype(elements_nodes_connection_[0][0])>>(0) && cell_lists_[cells[check_neighbor_cell2]][2][0] == static_cast<std::decay_t<decltype(elements_nodes_connection_[0][0])>>(-1) && cell_lists_[cells[check_neighbor_cell2]][3][0] == static_cast<std::decay_t<decltype(elements_nodes_connection_[0][0])>>(-1))
+        if (cell_lists_[cells[check_neighbor_cell2]][0][0] != static_cast<std::decay_t<decltype(elements_nodes_connection_[0][0])>>(-1) && cell_lists_[cells[check_neighbor_cell2]][1][0] == static_cast<std::decay_t<decltype(elements_nodes_connection_[0][0])>>(0) && cell_lists_[cells[check_neighbor_cell2]][2][0] == static_cast<std::decay_t<decltype(elements_nodes_connection_[0][0])>>(-1) && cell_lists_[cells[check_neighbor_cell2]][3][0] == static_cast<std::decay_t<decltype(elements_nodes_connection_[0][0])>>(-1))
         {
             cell_lists_[cells[check_neighbor_cell2]][2][0] = cells[check_neighbor_cell1];
             cell_lists_[cells[check_neighbor_cell2]][2][1] = boundary_type;
@@ -334,8 +323,19 @@ namespace SPH
             check_neighbor_cell1 = false;
             check_neighbor_cell2 = true;
             return;
+        }
+        if (cell_lists_[cells[check_neighbor_cell2]][0][0] != static_cast<std::decay_t<decltype(elements_nodes_connection_[0][0])>>(-1) && cell_lists_[cells[check_neighbor_cell2]][1][0] == static_cast<std::decay_t<decltype(elements_nodes_connection_[0][0])>>(0) && cell_lists_[cells[check_neighbor_cell2]][2][0] == static_cast<std::decay_t<decltype(elements_nodes_connection_[0][0])>>(0) && cell_lists_[cells[check_neighbor_cell2]][3][0] == static_cast<std::decay_t<decltype(elements_nodes_connection_[0][0])>>(-1))
+        {
+            cell_lists_[cells[check_neighbor_cell2]][3][0] = cells[check_neighbor_cell1];
+            cell_lists_[cells[check_neighbor_cell2]][3][1] = boundary_type;
+            cell_lists_[cells[check_neighbor_cell2]][3][2] = nodes[0];
+            cell_lists_[cells[check_neighbor_cell2]][3][3] = nodes[1];
+            cell_lists_[cells[check_neighbor_cell2]][3][4] = nodes[2];
+            check_neighbor_cell1 = false;
+            check_neighbor_cell2 = true;
+            return;
         } 
-        if (cell_lists_[cells[check_neighbor_cell2]][0][0] != cells[check_neighbor_cell1] && cell_lists_[cells[check_neighbor_cell2]][1][0] == static_cast<std::decay_t<decltype(elements_nodes_connection_[0][0])>>(0) && cell_lists_[cells[check_neighbor_cell2]][2][0] != static_cast<std::decay_t<decltype(elements_nodes_connection_[0][0])>>(-1) && cell_lists_[cells[check_neighbor_cell2]][3][0] == static_cast<std::decay_t<decltype(elements_nodes_connection_[0][0])>>(-1))
+        if (cell_lists_[cells[check_neighbor_cell2]][0][0] != static_cast<std::decay_t<decltype(elements_nodes_connection_[0][0])>>(-1) && cell_lists_[cells[check_neighbor_cell2]][1][0] != static_cast<std::decay_t<decltype(elements_nodes_connection_[0][0])>>(-1) && cell_lists_[cells[check_neighbor_cell2]][2][0] == static_cast<std::decay_t<decltype(elements_nodes_connection_[0][0])>>(0) && cell_lists_[cells[check_neighbor_cell2]][3][0] == static_cast<std::decay_t<decltype(elements_nodes_connection_[0][0])>>(-1))
         {
             cell_lists_[cells[check_neighbor_cell2]][3][0] = cells[check_neighbor_cell1];
             cell_lists_[cells[check_neighbor_cell2]][3][1] = boundary_type;
@@ -383,10 +383,6 @@ namespace SPH
         M << node2_coordinate - node1_coordinate, node3_coordinate - node1_coordinate, node4_coordinate - node1_coordinate;
         Real determinant = abs(M.determinant());
         Real element_volume = (static_cast<double>(1) / 6) * determinant;
-        if (element == 53151)
-        {
-            Real j = 1;
-        }
         Total_volume += element_volume;
         elements_volumes_[element] = element_volume;
     }
@@ -395,13 +391,11 @@ namespace SPH
     {
 
         for (size_t element_index = 0; element_index != elements_volumes_.size(); ++element_index)
-    {
+        {
+           
         for (std::vector<std::vector<long unsigned int>>::size_type neighbor = 0; neighbor != cell_lists_[element_index].size(); ++neighbor)
         {
-            /*if (element_index == 36150)
-            {
-              Real  a = 1;
-            }*/
+           
             size_t interface_node1_index = cell_lists_[element_index][neighbor][2];
             size_t interface_node2_index = cell_lists_[element_index][neighbor][3];
             size_t interface_node3_index = cell_lists_[element_index][neighbor][4];
@@ -411,9 +405,10 @@ namespace SPH
             Vecd interface_area_vector1 = node2_position - node1_position;
             Vecd interface_area_vector2 = node3_position - node1_position;
             Vecd area_vector = interface_area_vector1.cross(interface_area_vector2);
-            Real triangle_area = 0.5*area_vector.norm();
-            //Real interface_area_size = interface_area_vector1.norm();
-            all_data_of_distance_between_nodes.push_back(triangle_area);
+            Real triangle_area = 0.5 * area_vector.norm();
+            Real distance = sqrt(triangle_area);
+            Real interface_area_size = interface_area_vector1.norm();
+            all_data_of_distance_between_nodes.push_back(distance);
         }
     }
     }
