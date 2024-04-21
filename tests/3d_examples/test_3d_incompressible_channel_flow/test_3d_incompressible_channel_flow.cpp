@@ -12,28 +12,28 @@ using namespace SPH;
 int main(int ac, char* av[])
 {
     // read data from ANSYS mesh.file
-    ANSYSMesh_3d read_mesh_data(mesh_fullpath);
+    ANSYSMesh read_mesh_data(mesh_fullpath);
     //----------------------------------------------------------------------
    //	Build up the environment of a SPHSystem.
    //----------------------------------------------------------------------
-    SPHSystem sph_system(system_domain_bounds, particle_spacing_ref);
+    SPHSystem sph_system(system_domain_bounds, read_mesh_data.MinMeshEdge());
     // Handle command line arguments and override the tags for particle relaxation and reload.
-    sph_system.handleCommandlineOptions(ac, av);
-    IOEnvironment io_environment(sph_system);
+    sph_system.handleCommandlineOptions(ac, av)->setIOEnvironment();
     //----------------------------------------------------------------------
     //	Creating body, materials and particles.
     //----------------------------------------------------------------------
-    FluidBody air_block(sph_system, makeShared<WaveBody>("AirBody"));
+    FluidBody air_block(sph_system, makeShared<AirBody>("AirBody"));
     air_block.defineParticlesAndMaterial<BaseParticles, WeaklyCompressibleFluid>(rho0_f, c_f, mu_f);
-    air_block.generateParticles<ParticleGeneratorUnstructuredMesh_3d>(read_mesh_data);
+    Ghost<ReserveSizeFactor> ghost_boundary(0.5);
+    air_block.generateParticlesWithReserve<UnstructuredMesh>(ghost_boundary, read_mesh_data);
     air_block.addBodyStateForRecording<Real>("Density");
     air_block.addBodyStateForRecording<Real>("Pressure");
     SimpleDynamics<InvCFInitialCondition> initial_condition(air_block);
-    GhostCreationFromMesh_3d ghost_creation(air_block, read_mesh_data);
+    GhostCreationFromMesh ghost_creation(air_block, read_mesh_data, ghost_boundary);
     //----------------------------------------------------------------------
     //	Define body relation map.
     //----------------------------------------------------------------------
-    InnerRelationInFVM_3d air_block_inner(air_block, read_mesh_data);
+    InnerRelationInFVM air_block_inner(air_block, read_mesh_data);
     //----------------------------------------------------------------------
     //	Define the main numerical methods used in the simulation.
     //	Note that there may be data dependence on the constructors of these methods.
@@ -43,10 +43,9 @@ int main(int ac, char* av[])
     InteractionWithUpdate<fluid_dynamics::EulerianIntegration1stHalfInnerRiemann> pressure_relaxation(air_block_inner, 500.0);
     InteractionWithUpdate<fluid_dynamics::EulerianIntegration2ndHalfInnerRiemann> density_relaxation(air_block_inner, 8000.0);
     /** Boundary conditions set up */
-    InvCFBoundaryConditionSetup boundary_condition_setup(air_block_inner, ghost_creation.each_boundary_type_with_all_ghosts_index_,
-        ghost_creation.each_boundary_type_with_all_ghosts_eij_, ghost_creation.each_boundary_type_contact_real_index_);
+    InvCFBoundaryConditionSetup boundary_condition_setup(air_block_inner, ghost_creation);
     /** Time step size with considering sound wave speed. */
-    ReduceDynamics<fluid_dynamics::WCAcousticTimeStepSizeInFVM> get_fluid_time_step_size(air_block, read_mesh_data.min_distance_between_nodes_,0.6);
+    ReduceDynamics<fluid_dynamics::WCAcousticTimeStepSizeInFVM> get_fluid_time_step_size(air_block, read_mesh_data.MinMeshEdge(), 0.6);
     //----------------------------------------------------------------------
     // Visualization in FVM with date in cell.
     BodyStatesRecordingInMeshToVtu write_real_body_states(air_block, read_mesh_data);
@@ -92,13 +91,13 @@ int main(int ac, char* av[])
                 cout << fixed << setprecision(9) << "N=" << number_of_iterations << "	Time = "
                     << GlobalStaticVariables::physical_time_
                     << "	dt = " << dt << "\n";
+                write_maximum_speed.writeToFile(number_of_iterations);
             }
             number_of_iterations++;
             //write_real_body_states.writeToFile();
         }
         TickCount t2 = TickCount::now();
         write_real_body_states.writeToFile();
-        write_maximum_speed.writeToFile(number_of_iterations);
         TickCount t3 = TickCount::now();
         interval += t3 - t2;
     }
