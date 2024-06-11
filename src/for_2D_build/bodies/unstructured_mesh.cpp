@@ -436,7 +436,7 @@ void BoundaryConditionSetupInFVM::resetBoundaryConditions()
                     break;
                 case 5:
                     applyPressureOutletBC(ghost_index, index_i);
-                    break; 
+                    break;
                 case 7:
                     applySymmetryBoundary(ghost_index, index_i, e_ij);
                     break;

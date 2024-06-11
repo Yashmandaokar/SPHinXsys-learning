@@ -92,6 +92,7 @@ class DMFInitialCondition
             vel_[index_i][1] = v_another;
             mom_[index_i] = mass_[index_i] * vel_[index_i];
             E_[index_i] = rho_e * Vol_[index_i] + 0.5 * mass_[index_i] * vel_[index_i].squaredNorm();
+            
         }
         else
         {

@@ -46,8 +46,15 @@ void EulerianIntegration1stHalf<Inner<>, RiemannSolverType>::interaction(size_t 
 template <class RiemannSolverType>
 void EulerianIntegration1stHalf<Inner<>, RiemannSolverType>::update(size_t index_i, Real dt)
 {
-    mom_[index_i] += (dmom_dt_[index_i] + force_prior_[index_i]) * dt;
-    vel_[index_i] = mom_[index_i] / mass_[index_i];
+    if (index_i == 3224)
+    {
+        mom_[index_i] += (dmom_dt_[index_i] + force_prior_[index_i]) * dt;
+        vel_[index_i] = mom_[index_i] / mass_[index_i];
+        Vecd forcei = force_prior_[index_i];
+        Real j = 1.0;
+
+    }
+    
 }
 //=================================================================================================//
 template <class RiemannSolverType>
