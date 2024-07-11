@@ -3,8 +3,8 @@
  * @brief 	This is the inviscid incompressible channel flow test for the realization of FVM in the SPHinXsys.
  * @author 	Yash Mandaokar, Zhentong Wang and Xiangyu Hu
  */
-#include "test_3d_incompressible_channel_flow.h"
-
+#include "test_3d_incompressible_channel_flow_rans.h"
+#include "ransintegration.hpp"
 using namespace SPH;
 //----------------------------------------------------------------------
 //	Main program starts here.
@@ -38,12 +38,13 @@ int main(int ac, char *av[])
     SimpleDynamics<InvCFInitialCondition> initial_condition(air_block);
     /** Here we introduce the limiter in the Riemann solver and 0 means the no extra numerical dissipation.
      * the value is larger, the numerical dissipation larger. */
-    InteractionWithUpdate<fluid_dynamics::EulerianIntegration1stHalfInnerRiemann> pressure_relaxation(air_block_inner, 500.0);
+    InteractionWithUpdate<fluid_dynamics::Integration1stHalfInnerRiemannRANS> pressure_relaxation(air_block_inner, 500.0);
     InteractionWithUpdate<fluid_dynamics::EulerianIntegration2ndHalfInnerRiemann> density_relaxation(air_block_inner, 8000.0);
     /** Time step size with considering sound wave speed. */
     ReduceDynamics<fluid_dynamics::WCAcousticTimeStepSizeInFVM> get_fluid_time_step_size(air_block, read_mesh_data.MinMeshEdge(), 0.6);
     /** Boundary conditions set up */
     InvCFBoundaryConditionSetup boundary_condition_setup(air_block_inner, ghost_creation);
+    //----------------------------------------------------------------------
     // Visualization in FVM with date in cell.
     air_block.addBodyStateForRecording<Real>("Density");
     air_block.addBodyStateForRecording<Real>("Pressure");

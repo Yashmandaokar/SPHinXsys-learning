@@ -1,0 +1,327 @@
+#ifndef TURBULENCEMODEL_CPP
+#define TURBULENCEMODEL_CPP
+#include "TurbulenceModel.h"
+#include "sphinxsys.h"
+namespace SPH
+{  
+    namespace fluid_dynamics
+    {
+        /*template <class DataDelegationType>
+        template <class BaseRelationType>
+        BaseTurbulence<DataDelegationType>::BaseTurbulence(BaseRelationType& base_relation)
+            : BaseIntegration<DataDelegationType>(base_relation),
+            mom_(*this->particles_->template registerSharedVariable<Vecd>("Momentum")),
+            dmom_dt_(*this->particles_->template registerSharedVariable<Vecd>("MomentumChangeRate")),
+            dmass_dt_(*this->particles_->template registerSharedVariable<Real>("MassChangeRate")),
+            Vol_(this->particles_->Vol_), Cmu_(0.09), sigmak_(1.0), sigmaeps_(1.3),
+            C1eps_(1.44), C2eps_(1.92), K_(*particles_->getVariableByName<Real>("TKE")),
+            Eps_(*particles_->getVariableByName<Real>("Dissipation")),
+            mu_t_(*particles_->getVariableByName<Real>("TurbulentViscosity")) {}*/
+        //=================================================================================================//
+        BaseTurbulence::BaseTurbulence(BaseInnerRelation& inner_relation, GhostCreationFromMesh& ghost_creator)
+            : BaseIntegration<DataDelegateInner>(inner_relation), ghost_creator_(ghost_creator),
+            mom_(*this->particles_->template registerSharedVariable<Vecd>("Momentum")),
+            dmom_dt_(*this->particles_->template registerSharedVariable<Vecd>("MomentumChangeRate")),
+            dmass_dt_(*this->particles_->template registerSharedVariable<Real>("MassChangeRate")),
+            K_prod_p_(*this->particles_->template registerSharedVariable<Real>("TKEProductionInWallAdjCell")),
+            K_prod_(*this->particles_->template registerSharedVariable<Real>("TKEProduction")),
+            Eps_p_(*this->particles_->template registerSharedVariable<Real>("DissipationRateInWallAdjCell")),
+            Eps_sum_(*this->particles_->template registerSharedVariable<Real>("DissipationSum")),
+            K_adv_(*this->particles_->template registerSharedVariable<Real>("TKEAdvection")),
+            K_lap_(*this->particles_->template registerSharedVariable<Real>("TKELaplacian")),
+            Eps_adv_(*this->particles_->template registerSharedVariable<Real>("DissipationAdvection")),
+            Eps_lap_(*this->particles_->template registerSharedVariable<Real>("DissipationLaplacian")),
+            Eps_prodscalar_(*this->particles_->template registerSharedVariable<Real>("DissipationProdscalar")),
+            Eps_scalar_(*this->particles_->template registerSharedVariable<Real>("DissipationScalar")),
+            Cmu_(0.09), sigmak_(1.0), sigmaeps_(1.3), C1eps_(1.44), C2eps_(1.92), 
+            K_(*particles_->getVariableByName<Real>("TKE")),
+            Eps_(*particles_->getVariableByName<Real>("Dissipation")),
+            mu_t_(*particles_->getVariableByName<Real>("TurbulentViscosity")) {}
+        //=================================================================================================//
+        WallAdjacentCells::WallAdjacentCells(BaseInnerRelation& inner_relation, GhostCreationFromMesh& ghost_creator)
+            : BaseTurbulence(inner_relation, ghost_creator), yp_(*this->particles_->template registerSharedVariable<Real>("WallNormalDistance")),
+              walladjacentcellflag_(*this->particles_->template registerSharedVariable<Real>("FlagForWallAdjacentCells")),
+              wallnormal_(*this->particles_->template registerSharedVariable<Vecd>("WallNormal")), ymax_(0.0)
+        {
+            walladjacentcellyp();
+        }
+        //=================================================================================================//
+        void WallAdjacentCells::walladjacentcellyp()
+        {
+            walladjacentindex_.resize(particles_-> particles_bound_);
+            wallghostindex_.resize(particles_->particles_bound_);
+            walleij_.resize(particles_->particles_bound_);
+            Real boundary_type = 3;
+                
+            if (!ghost_creator_.each_boundary_type_with_all_ghosts_index_[boundary_type].empty())
+            {
+                for (size_t ghost_number = 0; ghost_number != ghost_creator_.each_boundary_type_with_all_ghosts_index_[boundary_type].size(); ++ghost_number)
+                {
+
+                    size_t ghost_index = ghost_creator_.each_boundary_type_with_all_ghosts_index_[boundary_type][ghost_number];
+                    Real index_real = ghost_creator_.each_boundary_type_contact_real_index_[boundary_type][ghost_number];
+                    walleij_[index_real] = ghost_creator_.each_boundary_type_with_all_ghosts_eij_[boundary_type][ghost_number];
+                    walladjacentindex_[index_real] = index_real;
+                    wallghostindex_[index_real] = ghost_index;
+
+                    if ((pos_[index_real] - pos_[ghost_index]).dot(walleij_[index_real]) > ymax_)
+                    {
+                        ymax_ = (pos_[index_real] - pos_[ghost_index]).dot(walleij_[index_real]);
+
+                    }
+                }
+            }
+        }
+        //=================================================================================================//
+        void WallAdjacentCells::update(size_t index_i, Real dt)
+        {
+            Vecd wallnormal = Vecd::Zero();
+            Vecd lower_wall = {pos_[index_i][0], 0.0};
+            Vecd upper_wall = {pos_[index_i][0], 2.0};
+            Vecd lower_wall_normal = {0.0, 1.0};
+            Vecd upper_wall_normal = {0.0, -1.0};
+
+            bool lower_wall_condition = ((pos_[index_i] - lower_wall).dot(lower_wall_normal) <= 3 * ymax_);
+            bool upper_wall_condition = ((pos_[index_i] - upper_wall).dot(upper_wall_normal) <= 3 * ymax_);
+
+            if (lower_wall_condition)
+            {
+                yp_[index_i] = (pos_[index_i] - lower_wall).dot(lower_wall_normal);
+                walladjacentcellflag_[index_i] = (1);
+                wallnormal_[index_i] = lower_wall_normal;
+            }
+            else if (upper_wall_condition)
+            {
+                yp_[index_i] = (pos_[index_i] - upper_wall).dot(upper_wall_normal);
+                walladjacentcellflag_[index_i] = (1);    
+                wallnormal_[index_i] = upper_wall_normal;
+            }
+
+        }
+        //=================================================================================================//
+
+        KEpsilonStd1stHalf::KEpsilonStd1stHalf(BaseInnerRelation &inner_relation, GhostCreationFromMesh& ghost_creator) 
+            : BaseTurbulence(inner_relation, ghost_creator),
+            dK_dt_(*this->particles_->template registerSharedVariable<Real>("TKEChangeRate")),
+            walladjacentcellflag_(*particles_->getVariableByName<Real>("FlagForWallAdjacentCells"))
+        {}
+        //=================================================================================================//
+        void KEpsilonStd1stHalf::interaction(size_t index_i, Real dt)
+        {
+            if (walladjacentcellflag_[index_i] != 1)
+            {
+                mu_t_[index_i] = rho_[index_i] * Cmu_ * ((K_[index_i] * K_[index_i]) / (Eps_[index_i]));
+                //mu_t_[index_i] = std::min(std::max(mu_t, mu_t_minlimit), mu_t_maxlimit);   
+            }
+           
+            Neighborhood& inner_neighborhood = inner_configuration_[index_i];
+            Matd K_prod = Matd::Zero(), K_prod_iso = Matd::Zero(), K_prod_total = Matd::Zero();
+            Matd vel_matrix = Matd::Zero(), vel_gradient_mat = Matd::Zero(), vel_gradient_mat_transpose = Matd::Zero();
+            Matd strain_tensor = Matd::Zero();
+            K_prod_[index_i] = 0.0, K_adv_[index_i] = 0.0, K_lap_[index_i] = 0.0;
+            Eps_sum_[index_i] = 0.0;
+            for (size_t n = 0; n != inner_neighborhood.current_size_; ++n)
+            {
+                size_t index_j = inner_neighborhood.j_[n];
+                Real dW_ij = inner_neighborhood.dW_ij_[n];
+                Real r_ij = inner_neighborhood.r_ij_[n];
+                Vecd& e_ij = inner_neighborhood.e_ij_[n];
+                Real mu_t_avg = (2.0 * mu_t_[index_i] * mu_t_[index_j]) / (mu_t_[index_i] + mu_t_[index_j]);
+
+                K_adv_[index_i] += -(dW_ij * Vol_[index_j] * rho_[index_i] * (K_[index_i] - K_[index_j]) * e_ij).dot(vel_[index_i]);
+                K_lap_[index_i] += 2.0 * dW_ij * Vol_[index_j] * ((fluid_.ReferenceViscosity() + mu_t_avg / sigmak_) * (K_[index_i] - K_[index_j]) / (r_ij));
+                vel_matrix = (vel_[index_i] - vel_[index_j]) * e_ij.transpose();
+                vel_gradient_mat = dW_ij * Vol_[index_j] * vel_matrix;
+                vel_gradient_mat_transpose = dW_ij * Vol_[index_j] * vel_matrix.transpose();
+                strain_tensor = 0.5 * (vel_gradient_mat + vel_gradient_mat_transpose);
+                K_prod = mu_t_avg * 2.0 * (strain_tensor.array() * strain_tensor.array());
+                K_prod_iso = (2.0 / 3.0 * rho_[index_i] * K_[index_i] * Matd::Identity()).array() * vel_gradient_mat.array();
+                K_prod_total = K_prod - K_prod_iso;
+                K_prod_[index_i] += K_prod.sum();
+                Eps_sum_[index_i] += -rho_[index_i] * Eps_[index_i];
+            }
+            
+            //Check if the cell is adjacent to wall
+                if (walladjacentcellflag_[index_i] == 1.0)
+                {
+                    K_prod_[index_i] = K_prod_p_[index_i];
+                    Eps_[index_i] += Eps_p_[index_i];
+                    dK_dt_[index_i] = K_adv_[index_i] + K_prod_[index_i] - rho_[index_i] * Eps_[index_i] + K_lap_[index_i]; 
+                }
+                else
+                {
+                    Real Kprodpcell = K_prod_[index_i];
+                    Real Eps_pcell = Eps_sum_[index_i];
+                    dK_dt_[index_i] = K_adv_[index_i] + K_prod_[index_i] + Eps_sum_[index_i] + K_lap_[index_i];
+                    Real x = 2;
+                }
+        }
+        //=================================================================================================//
+        void KEpsilonStd1stHalf::update(size_t index_i, Real dt)
+        {
+            K_[index_i] += (dK_dt_[index_i] / rho_[index_i]) * dt;
+                if (K_[index_i] < 0.0)
+            {
+                Real K = 1.0;
+            }
+        }
+        //=================================================================================================//
+        KEpsilonStd2ndHalf::KEpsilonStd2ndHalf(BaseInnerRelation &inner_relation, GhostCreationFromMesh& ghost_creator) 
+            : BaseTurbulence(inner_relation, ghost_creator),
+            dEps_dt_(*this->particles_->template registerSharedVariable<Real>("DissipationChangeRate")),
+            walladjacentcellflag_(*particles_->getVariableByName<Real>("FlagForWallAdjacentCells"))
+        {}
+        //=================================================================================================//
+        
+        void KEpsilonStd2ndHalf::interaction(size_t index_i, Real dt)
+        {
+            if (walladjacentcellflag_[index_i] != 1)
+            {
+                mu_t_[index_i] = rho_[index_i] * Cmu_ * ((K_[index_i] * K_[index_i]) / (Eps_[index_i]));
+            }
+
+            Real Eps_changerate = 0.0;
+            Eps_adv_[index_i] = 0.0, Eps_lap_[index_i] = 0.0, Eps_prodscalar_[index_i] = 0.0, Eps_scalar_[index_i] = 0.0;
+            Neighborhood &inner_neighborhood = inner_configuration_[index_i];
+            for (size_t n = 0; n != inner_neighborhood.current_size_; ++n)
+            {
+                    size_t index_j = inner_neighborhood.j_[n];
+                    Real dW_ij = inner_neighborhood.dW_ij_[n];
+                    Real r_ij = inner_neighborhood.r_ij_[n];
+                    Vecd &e_ij = inner_neighborhood.e_ij_[n];
+                    Real mu_t_avg = (2.0 * mu_t_[index_i] * mu_t_[index_j]) / (mu_t_[index_i] + mu_t_[index_j]);
+
+                    Eps_adv_[index_i] = -(dW_ij * Vol_[index_j] * rho_[index_i] * (Eps_[index_i] - Eps_[index_j]) * e_ij).dot(vel_[index_i]);
+                    Eps_lap_[index_i] = 2.0 * dW_ij * Vol_[index_j] * (fluid_.ReferenceViscosity() + mu_t_avg / sigmaeps_) * ((Eps_[index_i] - Eps_[index_j]) / (r_ij));
+                    Eps_prodscalar_[index_i] = C1eps_ * (Eps_[index_i] / (K_[index_i])) * K_prod_[index_i];
+                    Eps_scalar_[index_i] = C2eps_ * rho_[index_i] * (Eps_[index_i] * Eps_[index_i]) / (K_[index_i]);
+                    Eps_changerate += Eps_adv_[index_i] + Eps_prodscalar_[index_i] - Eps_scalar_[index_i] + Eps_lap_[index_i];
+            }
+                dEps_dt_[index_i] = Eps_changerate;
+        }
+        //=================================================================================================//
+        void KEpsilonStd2ndHalf::update(size_t index_i, Real dt)
+        {
+            if (walladjacentcellflag_[index_i] != 1)
+            {
+                Eps_[index_i] += (dEps_dt_[index_i] / rho_[index_i]) * dt;
+            }
+            if (Eps_[index_i] < 0.0)
+            {
+                Real K = 1.0;
+            }
+        }
+        //=================================================================================================//
+        StdWallFunctionFVM::StdWallFunctionFVM(BaseInnerRelation &inner_relation, GhostCreationFromMesh &ghost_creator)
+            : BaseTurbulence(inner_relation, ghost_creator), walladjacentcellflag_(*particles_->getVariableByName<Real>("FlagForWallAdjacentCells"))
+            , yp_(*particles_->getVariableByName<Real>("WallNormalDistance")),
+              wallnormal_(*particles_->getVariableByName<Vecd>("WallNormal")), vonkar_(0.4187), E_(9.793)
+        {}
+        //=================================================================================================//
+        void StdWallFunctionFVM::interaction(size_t index_i, Real dt)
+        {
+            if (walladjacentcellflag_[index_i] == 1)
+            {
+                
+                Real ystar = (rho_[index_i] * std::pow(Cmu_, 0.25) * std::pow(K_[index_i], 0.5) * yp_[index_i]) / (fluid_.ReferenceViscosity());
+                Real u_star, wall_shear_stress, mu_eff_wall, friction_velocity, wall_shear_stress_1, friction_velocity_1, mu_eff_wall_1;
+                Vecd veltangential = (vel_[index_i] - wallnormal_[index_i].dot(vel_[index_i]) * (wallnormal_[index_i]));
+                if (ystar >= 11.225)
+                {
+                    u_star = (1.0 / vonkar_) * std::log(E_ * ystar);
+                    wall_shear_stress_1 = (veltangential.norm() * std::pow(Cmu_, 0.25) * std::pow(K_[index_i], 0.5) * rho_[index_i]) / (u_star);
+                    mu_t_[index_i] = fluid_.ReferenceViscosity() * ((ystar * vonkar_) / (std::log(E_ * ystar)) - 1.0);
+                    
+                    wall_shear_stress = (mu_t_[index_i] + fluid_.ReferenceViscosity()) * (veltangential.norm() / yp_[index_i]);
+                    mu_eff_wall = wall_shear_stress * yp_[index_i] / (veltangential.norm());
+                    mu_eff_wall_1 = wall_shear_stress_1 * yp_[index_i] / (veltangential.norm());
+                    friction_velocity = std::sqrt(wall_shear_stress / rho_[index_i]);
+                    friction_velocity_1 = std::sqrt(wall_shear_stress_1 / rho_[index_i]);
+
+                    K_prod_p_[index_i] = std::pow(wall_shear_stress, 2.0) / (vonkar_ * rho_[index_i] * std::pow(Cmu_, 0.25) * std::pow(K_[index_i], 0.5) * yp_[index_i]);
+                    Eps_p_[index_i] = (std::pow(Cmu_, 3.0 / 4.0) * std::pow(K_[index_i], 1.5)) / (vonkar_ * yp_[index_i]);
+                }
+                else if (ystar < 11.225)
+                {
+                    u_star = ystar;
+                    wall_shear_stress_1 = (veltangential.norm() * std::pow(Cmu_, 0.25) * std::pow(K_[index_i], 0.5) * rho_[index_i]) / (u_star);
+                    mu_t_[index_i] = 0.0;
+                    wall_shear_stress = (mu_t_[index_i] + fluid_.ReferenceViscosity()) * (veltangential.norm() / yp_[index_i]);
+                    mu_eff_wall = wall_shear_stress * yp_[index_i] / (veltangential.norm());
+                    mu_eff_wall_1 = wall_shear_stress_1 * yp_[index_i] / (veltangential.norm());
+                    friction_velocity = std::sqrt(wall_shear_stress / rho_[index_i]);
+                    friction_velocity_1 = std::sqrt(wall_shear_stress_1 / rho_[index_i]);
+
+                    K_prod_p_[index_i] = 0.0;
+                    Eps_p_[index_i] = (K_[index_i] * 2.0 * fluid_.ReferenceViscosity()) / (rho_[index_i] * yp_[index_i] * yp_[index_i]);
+                }
+
+            } 
+            else 
+            {
+                mu_t_[index_i] = rho_[index_i] * Cmu_ * ((K_[index_i] * K_[index_i]) / (Eps_[index_i]));
+            }
+        } 
+        //=================================================================================================//
+        /*StdWallFunctionFVM::StdWallFunctionFVM(BaseInnerRelation& inner_relation, GhostCreationFromMesh& ghost_creator)
+            : WallAdjacentCells(inner_relation, ghost_creator), vonkar_(0.4187), E_(9.793)
+            //dK_dt_(*particles_->getVariableByName<Real>("TKEChangeRate")),
+            //K_prod_p_(*particles_->getVariableByName<Real>("TKEProductionInWallAdjCell")),
+            //Esp_p_(*particles_->getVariableByName<Real>("DissipationRateInWallAdjCell")),
+        {}
+        //=================================================================================================//
+        void StdWallFunctionFVM::interaction(size_t index_i, Real dt)
+        {
+            Real K_changerate_p = 0.0, K_prod_p = 0.0, Eps_p = 0.0, K_advection_p = 0.0;
+            Vecd K_laplacian_p = Vecd::Zero();
+
+            if (walladjacentcellflag_[index_i] == 1)
+            {
+                Real ghost_index = wallghostindex_[index_i];
+                Real yp = (pos_[index_i] - pos_[ghost_index]).dot(walleij_[index_i]);
+                Vecd posghost = pos_[ghost_index];
+                Vecd posrealindex = pos_[index_i];
+                Real ystar = (rho_[index_i] * std::pow(Cmu_, 0.25) * std::pow(K_[index_i], 0.5) * yp) / (fluid_.ReferenceViscosity());
+                Real u_star, wall_shear_stress, mu_eff_wall, friction_velocity, yplus, wall_shear_stress_1, friction_velocity_1, mu_eff_wall_1;
+                Vecd veltangential = (vel_[index_i] - walleij_[index_i].dot(vel_[index_i]) * (walleij_[index_i]));
+                if (ystar >= 11.225)
+                {
+                    u_star = (1.0 / vonkar_) * std::log(E_ * ystar);
+                    wall_shear_stress_1 = (veltangential.norm() * std::pow(Cmu_, 0.25) * std::pow(K_[index_i], 0.5) * rho_[index_i]) / (u_star);
+                    mu_t_[index_i] = fluid_.ReferenceViscosity() * ((ystar * vonkar_) / (std::log(E_ * ystar)) - 1.0);
+                    wall_shear_stress = (mu_t_[index_i] + fluid_.ReferenceViscosity()) * (veltangential.norm() / yp);
+                    mu_eff_wall = wall_shear_stress * yp / (veltangential.norm());
+                    mu_eff_wall_1 = wall_shear_stress_1 * yp / (veltangential.norm());
+                    friction_velocity = std::sqrt(wall_shear_stress / rho_[index_i]);
+                    friction_velocity_1 = std::sqrt(wall_shear_stress_1 / rho_[index_i]);
+
+                    K_prod_p_[index_i] = std::pow(wall_shear_stress, 2.0) / (vonkar_ * rho_[index_i] * std::pow(Cmu_, 0.25) * std::pow(K_[index_i], 0.5) * yp);
+                    Eps_p_[index_i] = (std::pow(Cmu_, 3.0 / 4.0) * std::pow(K_[index_i], 1.5)) / (vonkar_ * yp);
+                }
+                else if (ystar < 11.225)
+                {
+                    u_star = ystar;
+                    wall_shear_stress_1 = (veltangential.norm() * std::pow(Cmu_, 0.25) * std::pow(K_[index_i], 0.5) * rho_[index_i]) / (u_star);
+                    mu_t_[index_i] = 0.0;
+                    wall_shear_stress = (mu_t_[index_i] + fluid_.ReferenceViscosity()) * (veltangential.norm() / yp);
+                    mu_eff_wall = wall_shear_stress * yp / (veltangential.norm());
+                    mu_eff_wall_1 = wall_shear_stress_1 * yp / (veltangential.norm());
+                    friction_velocity = std::sqrt(wall_shear_stress / rho_[index_i]);
+                    friction_velocity_1 = std::sqrt(wall_shear_stress_1 / rho_[index_i]);
+
+                    K_prod_p_[index_i] = 0.0;
+                    Eps_p_[index_i] = (K_[index_i] * 2.0 * fluid_.ReferenceViscosity()) / (rho_[index_i] * yp * yp);
+                }
+            }
+            else if (walladjacentcellflag_[index_i] != 1)
+            {
+                mu_t_[index_i] = rho_[index_i] * Cmu_ * ((K_[index_i] * K_[index_i]) / (Eps_[index_i]));
+            }
+        }*/
+        //=================================================================================================//
+         
+        
+    }// namespace fluid_dynamics
+
+}// namespace SPH
+#endif // TURBULENCEMODEL_CPP

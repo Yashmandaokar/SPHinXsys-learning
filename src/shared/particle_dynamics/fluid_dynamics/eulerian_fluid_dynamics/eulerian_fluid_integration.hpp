@@ -38,7 +38,15 @@ void EulerianIntegration1stHalf<Inner<>, RiemannSolverType>::interaction(size_t 
         FluidStateIn state_j(rho_[index_j], vel_[index_j], p_[index_j]);
         FluidStateOut interface_state = riemann_solver_.InterfaceState(state_i, state_j, e_ij);
         Matd convect_flux = interface_state.rho_ * interface_state.vel_ * interface_state.vel_.transpose();
+
         momentum_change_rate -= 2.0 * Vol_[index_i] * (convect_flux + interface_state.p_ * Matd::Identity()) * e_ij * dW_ijV_j;
+        if (index_i == 2052)
+        {
+            Vecd momentum_rate = -2.0 * Vol_[index_i] * (convect_flux + interface_state.p_ * Matd::Identity()) * e_ij * dW_ijV_j;
+            Vecd flux = -2.0 * Vol_[index_i] * convect_flux * e_ij * dW_ijV_j;
+            Vecd prgrad = -2.0 * Vol_[index_i] * interface_state.p_ * Matd::Identity() * e_ij * dW_ijV_j;
+            Real x = 1;
+        }
     }
     dmom_dt_[index_i] = momentum_change_rate;
 }
@@ -47,7 +55,13 @@ template <class RiemannSolverType>
 void EulerianIntegration1stHalf<Inner<>, RiemannSolverType>::update(size_t index_i, Real dt)
 {
     mom_[index_i] += (dmom_dt_[index_i] + force_prior_[index_i]) * dt;
-    vel_[index_i] = mom_[index_i] / mass_[index_i];
+    vel_[index_i] = mom_[index_i] / mass_[index_i]; 
+    if (index_i == 2052)
+    {
+        Vecd veli = vel_[index_i];
+        Vecd momi = mom_[index_i];
+        Real x = 1;
+    }
 }
 //=================================================================================================//
 template <class RiemannSolverType>
@@ -105,6 +119,20 @@ void EulerianIntegration2ndHalf<Inner<>, RiemannSolverType>::interaction(size_t 
         FluidStateIn state_j(rho_[index_j], vel_[index_j], p_[index_j]);
         FluidStateOut interface_state = riemann_solver_.InterfaceState(state_i, state_j, e_ij);
         mass_change_rate -= 2.0 * Vol_[index_i] * (interface_state.rho_ * interface_state.vel_).dot(e_ij) * dW_ijV_j;
+
+        if (dt == 0.0024646820310076745 && index_i == 8)
+        {
+            Vecd veli = vel_[index_i];
+            Vecd velj = vel_[index_j];
+            Vecd veldiff = veli - velj;
+            Vecd vel = veli + velj;
+            Real Voli = Vol_[index_i];
+            Real Volj = Vol_[index_j];
+            Real rhoi = rho_[index_i];
+            Real rhoj = rho_[index_j];
+            Real f = 10.0;
+        }
+
     }
     dmass_dt_[index_i] = mass_change_rate;
 }
@@ -115,6 +143,13 @@ void EulerianIntegration2ndHalf<Inner<>, RiemannSolverType>::update(size_t index
     mass_[index_i] += dmass_dt_[index_i] * dt;
     rho_[index_i] = mass_[index_i] / Vol_[index_i];
     p_[index_i] = fluid_.getPressure(rho_[index_i]);
+    if (mass_[index_i] < 0)
+    {
+        Real pr = p_[index_i];
+        Real rho = rho_[index_i];
+        Real Mass = mass_[index_i];
+        Real y = 1.0;
+    }
 }
 //=================================================================================================//
 template <class RiemannSolverType>

@@ -154,7 +154,7 @@ class ReduceDynamics : public LocalDynamicsType,
  * @class BaseInteractionDynamics
  * @brief This is the base class for particle interaction with other particles
  */
-template <class LocalDynamicsType, class ExecutionPolicy = ParallelPolicy>
+template <class LocalDynamicsType, class ExecutionPolicy = SequencedPolicy>
 class BaseInteractionDynamics : public LocalDynamicsType, public BaseDynamics<void>
 {
   public:
@@ -263,7 +263,7 @@ class InteractionDynamics : public BaseInteractionDynamics<LocalDynamicsType, Ex
  * @class InteractionWithUpdate
  * @brief This class includes an interaction and a update steps
  */
-template <class LocalDynamicsType, class ExecutionPolicy = ParallelPolicy>
+template <class LocalDynamicsType, class ExecutionPolicy = SequencedPolicy>
 class InteractionWithUpdate : public InteractionDynamics<LocalDynamicsType, ExecutionPolicy>
 {
   public:

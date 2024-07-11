@@ -4,11 +4,10 @@
  * @author 	Yash Mandaokar, Zhentong Wang and Xiangyu Hu
  */
 
-#ifndef TEST_3D_INCOMPRESSIBLE_CHANNEL_FLOW_H
-#define TEST_3D_INCOMPRESSIBLE_CHANNEL_FLOW_H
+#ifndef TEST_3D_INCOMPRESSIBLE_CHANNEL_FLOW_RANS_H
+#define TEST_3D_INCOMPRESSIBLE_CHANNEL_FLOW_RANS_H
 
 #include "common_weakly_compressible_FVM_classes.h"
-
 
 using namespace SPH;
 
@@ -85,12 +84,18 @@ class InvCFBoundaryConditionSetup : public BoundaryConditionSetupInFVM
           fluid_(DynamicCast<WeaklyCompressibleFluid>(this, particles_->getBaseMaterial())){};
     virtual ~InvCFBoundaryConditionSetup(){};
 
-   void applyReflectiveWallBoundary(size_t ghost_index, size_t index_i, Vecd e_ij) override
-   {
-       vel_[ghost_index] = (vel_[index_i] - e_ij.dot(vel_[index_i]) * (e_ij)) + (-e_ij.dot(vel_[index_i]) * (e_ij));
-       p_[ghost_index] = p_[index_i];
-       rho_[ghost_index] = rho_[index_i];
-   }
+    void applyNonSlipWallBoundary(size_t ghost_index, size_t index_i) override
+    {
+        vel_[ghost_index] = -vel_[index_i];
+        p_[ghost_index] = p_[index_i];
+        rho_[ghost_index] = rho_[index_i];
+    }
+    /*void applyReflectiveWallBoundary(size_t ghost_index, size_t index_i, Vecd e_ij) override
+    {
+        vel_[ghost_index] = (vel_[index_i] - e_ij.dot(vel_[index_i]) * (e_ij)) + (-e_ij.dot(vel_[index_i]) * (e_ij));
+        p_[ghost_index] = p_[index_i];
+        rho_[ghost_index] = rho_[index_i];
+    }*/
     void applyVelocityInletFlow(size_t ghost_index, size_t index_i) override
     {
         Vecd far_field_velocity(1.0, 0.0, 0.0);
@@ -114,4 +119,4 @@ class InvCFBoundaryConditionSetup : public BoundaryConditionSetupInFVM
   protected:
     Fluid &fluid_;
 };
-#endif // TEST_3D_INCOMPRESSIBLE_CHANNEL_FLOW_H
+#endif // TEST_3D_INCOMPRESSIBLE_CHANNEL_FLOW_RANS_H
