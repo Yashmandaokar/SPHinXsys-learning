@@ -108,6 +108,7 @@ class EulerianIntegration2ndHalf<Inner<>, RiemannSolverType>
 
   protected:
     RiemannSolverType riemann_solver_;
+    StdLargeVec<Vecd> &vel_prof_;
 };
 using EulerianIntegration2ndHalfInnerRiemann = EulerianIntegration2ndHalf<Inner<>, AcousticRiemannSolver>;
 

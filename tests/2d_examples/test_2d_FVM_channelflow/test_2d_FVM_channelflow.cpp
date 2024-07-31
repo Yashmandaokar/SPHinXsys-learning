@@ -45,12 +45,12 @@ int main(int ac, char *av[])
     //InteractionWithUpdate<fluid_dynamics::MeanVelocity> meanvelocity_relaxation(water_block_inner);
     //fluid_dynamics::WallAdjacentCells wall_adj_cell(water_block_inner, ghost_creation);
     
-    InteractionWithUpdate<fluid_dynamics::Integration1stHalfInnerRiemannRANS> pressure_relaxation(water_block_inner, 20000);
+    InteractionWithUpdate<fluid_dynamics::EulerianIntegration1stHalfInnerRiemann> pressure_relaxation(water_block_inner, 20000);
     InteractionWithUpdate<fluid_dynamics::EulerianIntegration2ndHalfInnerRiemann> density_relaxation(water_block_inner, 20000);
     TCFBoundaryConditionSetup boundary_condition_setup(water_block_inner, ghost_creation);
     /** Time step size with considering sound wave speed. */
     ReduceDynamics<fluid_dynamics::WCAcousticTimeStepSizeInFVM> get_fluid_time_step_size(water_block, read_mesh_data.MinMeshEdge());
-    //InteractionWithUpdate<fluid_dynamics::ViscousForceInner> viscous_force(water_block_inner);
+    InteractionWithUpdate<fluid_dynamics::ViscousForceInner> viscous_force(water_block_inner);
     //----------------------------------------------------------------------
 //	Compute the force exerted on solid body due to fluid pressure and viscosity
 //----------------------------------------------------------------------
@@ -94,7 +94,7 @@ int main(int ac, char *av[])
         {
             Real dt = get_fluid_time_step_size.exec();
             boundary_condition_setup.resetBoundaryConditions();
-            //viscous_force.exec();
+            viscous_force.exec();
             //boundary_condition_setup.resetBoundaryConditions();
             pressure_relaxation.exec(dt);
             boundary_condition_setup.resetBoundaryConditions();

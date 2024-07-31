@@ -94,7 +94,7 @@ using namespace execution;
  * @class SimpleDynamics
  * @brief Simple particle dynamics without considering particle interaction
  */
-template <class LocalDynamicsType, class ExecutionPolicy = ParallelPolicy>
+template <class LocalDynamicsType, class ExecutionPolicy = SequencedPolicy>
 class SimpleDynamics : public LocalDynamicsType, public BaseDynamics<void>
 {
   public:

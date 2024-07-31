@@ -35,38 +35,34 @@ int main(int ac, char *av[])
     //	Define body relation map.
     //----------------------------------------------------------------------
     InnerRelationInFVM water_block_inner(water_block, read_mesh_data);
+    SimpleDynamics<fluid_dynamics::Kepsprofiles> profiles(water_block_inner, meshdatapath);
     SimpleDynamics<TCFInitialCondition> initial_condition(water_block);
-    SimpleDynamics<fluid_dynamics::WallAdjacentCells> wall_adj_cell(water_block_inner, ghost_creation);
+    //SimpleDynamics<fluid_dynamics::WallAdjacentCells> wall_adj_cell(water_block_inner, ghost_creation);
     //----------------------------------------------------------------------
     //	Define the main numerical methods used in the simulation.
     //	Note that there may be data dependence on the constructors of these methods.
     //----------------------------------------------------------------------
     /** Here we introduce the limiter in the Riemann solver and 0 means the no extra numerical dissipation.
     the value is larger, the numerical dissipation larger*/
-    //InteractionWithUpdate<fluid_dynamics::MeanVelocity> meanvelocity_relaxation(water_block_inner);
-    //fluid_dynamics::WallAdjacentCells wall_adj_cell(water_block_inner, ghost_creation);
     InteractionWithUpdate<fluid_dynamics::KEpsilonStd1stHalf> tke(water_block_inner, ghost_creation);
     InteractionWithUpdate<fluid_dynamics::KEpsilonStd2ndHalf> dissipationrate(water_block_inner, ghost_creation);
-    InteractionDynamics<fluid_dynamics::StdWallFunctionFVM> wall_function(water_block_inner, ghost_creation);
-    InteractionWithUpdate<fluid_dynamics::EulerianIntegration1stHalfInnerRiemannRANS> pressure_relaxation(water_block_inner, 0.0);
-    InteractionWithUpdate<fluid_dynamics::EulerianIntegration2ndHalfInnerRiemann> density_relaxation(water_block_inner, 0.0);
+    //InteractionDynamics<fluid_dynamics::StdWallFunctionFVM> wall_function(water_block_inner, ghost_creation);
+    InteractionWithUpdate<fluid_dynamics::EulerianIntegration1stHalfInnerRiemannRANS> pressure_relaxation(water_block_inner, 200);
+    InteractionWithUpdate<fluid_dynamics::EulerianIntegration2ndHalfInnerRiemann> density_relaxation(water_block_inner, 20000);
     TCFBoundaryConditionSetup boundary_condition_setup(water_block_inner, ghost_creation);
     /** Time step size with considering sound wave speed. */
     ReduceDynamics<fluid_dynamics::WCAcousticTimeStepSizeInFVM> get_fluid_time_step_size(water_block, read_mesh_data.MinMeshEdge());
-   // InteractionWithUpdate<fluid_dynamics::ViscousForceInner> viscous_force(water_block_inner);
-    //----------------------------------------------------------------------
-//	Compute the force exerted on solid body due to fluid pressure and viscosity
-//----------------------------------------------------------------------
-    //InteractionDynamics<fluid_dynamics::ViscousForceFromFluidInFVM> viscous_force_on_solid(water_block_inner, ghost_creation.each_boundary_type_contact_real_index_);
-    //InteractionDynamics<fluid_dynamics::PressureForceFromFluidInFVM<decltype(density_relaxation)>> pressure_force_on_solid(water_block_inner, ghost_creation.each_boundary_type_contact_real_index_);
+    InteractionWithUpdate<LinearGradientCorrectionMatrixInner> kernel_correction_matrix(water_block_inner);
+    InteractionDynamics<KernelGradientCorrectionInner> kernel_gradient_update(water_block_inner);
    // visualization in FVM with data in cell
     BodyStatesRecordingInMeshToVtp write_real_body_states(water_block, read_mesh_data);
-    //RegressionTestDynamicTimeWarping<ReducedQuantityRecording<QuantitySummation<Vecd>>> write_total_viscous_force_on_inserted_body(water_block, "ViscousForceOnSolid");
-    //ReducedQuantityRecording<QuantitySummation<Vecd>> write_total_pressure_force_on_inserted_body(water_block, "PressureForceOnSolid");
     ReducedQuantityRecording<MaximumSpeed> write_maximum_speed(water_block);
 
+    profiles.exec();
     initial_condition.exec();
-    wall_adj_cell.exec();
+    //wall_adj_cell.exec();
+    kernel_correction_matrix.exec();
+    kernel_gradient_update.exec();
     water_block_inner.updateConfiguration();
     water_block.addBodyStateForRecording<Vecd>("Velocity");
     water_block.addBodyStateForRecording<Real>("Density");
@@ -74,6 +70,9 @@ int main(int ac, char *av[])
     water_block.addBodyStateForRecording<Real>("TKE");
     water_block.addBodyStateForRecording<Real>("Dissipation");
     water_block.addBodyStateForRecording<Real>("TurbulentViscosity");
+    water_block.addBodyStateForRecording<Real>("TKEProfile");
+    water_block.addBodyStateForRecording<Real>("DissipationProfile");
+    water_block.addBodyStateForRecording<Real>("TurblunetViscosityProfile");
     water_block.addBodyStateForRecording<Real>("TKEProduction");
     water_block.addBodyStateForRecording<Real>("TKEChangeRate");
     water_block.addBodyStateForRecording<Real>("DissipationChangeRate");
@@ -83,15 +82,29 @@ int main(int ac, char *av[])
     water_block.addBodyStateForRecording<Real>("DissipationLaplacian");
     water_block.addBodyStateForRecording<Real>("DissipationProdscalar");
     water_block.addBodyStateForRecording<Real>("DissipationScalar");
-    //water_block.addBodyStateForRecording<Vecd>("MeanVelocity");
-    write_real_body_states.writeToFile(0);
+    water_block.addBodyStateForRecording<Vecd>("VelocityProfile");
+    water_block.addBodyStateForRecording<Real>("WallShearStress");
+    water_block.addBodyStateForRecording<Vecd>("Momentum");
+    water_block.addBodyStateForRecording<Vecd>("MomentumChangeRate");
+    water_block.addBodyStateForRecording<Real>("MassChangeRate");
+    water_block.addBodyStateForRecording<Vecd>("MomentumAdvection");
+    water_block.addBodyStateForRecording<Vecd>("MomentumViscousDissipation");
+    water_block.addBodyStateForRecording<Vecd>("MomentumPressureGradient");
+    water_block.addBodyStateForRecording<Vecd>("MomentumTKEGradient");
+    water_block.addBodyStateForRecording<Real>("Ystar");
+    water_block.addBodyStateForRecording<Real>("StrainRate");
+    water_block.addBodyStateForRecording<Real>("dudx");
+    water_block.addBodyStateForRecording<Real>("dudy");
+    water_block.addBodyStateForRecording<Real>("dvdx");
+    water_block.addBodyStateForRecording<Real>("dvdy");
+    water_block.addBodyStateForRecording<Matd>("VelocityGradient");
     //----------------------------------------------------------------------
     //	Setup for time-stepping control
     //----------------------------------------------------------------------
     size_t number_of_iterations = 0;
-    int screen_output_interval = 1000;
-    Real end_time = 20.0;
-    Real output_interval = 0.1; /**< time stamps for output. */
+    int screen_output_interval = 5000;
+    Real end_time = 800.0;
+    Real output_interval = 0.5; /**< time stamps for output. */
     //----------------------------------------------------------------------
     //	Statistics for CPU time
     //----------------------------------------------------------------------
@@ -115,9 +128,6 @@ int main(int ac, char *av[])
             boundary_condition_setup.resetBoundaryConditions();
             dissipationrate.exec(dt);
             boundary_condition_setup.resetBoundaryConditions();
-            wall_function.exec();
-            boundary_condition_setup.resetBoundaryConditions();
-            //viscous_force.exec();
             pressure_relaxation.exec(dt);
             write_maximum_speed.writeToFile(number_of_iterations);
             boundary_condition_setup.resetBoundaryConditions();
@@ -129,23 +139,19 @@ int main(int ac, char *av[])
                 cout << fixed << setprecision(9) << "N=" << number_of_iterations << "	Time = "
                     << GlobalStaticVariables::physical_time_
                     << "	dt = " << dt << "\n";
-                //viscous_force_on_solid.exec();
-                //pressure_force_on_solid.exec();
-                //write_total_viscous_force_on_inserted_body.writeToFile(number_of_iterations);
-                //write_total_pressure_force_on_inserted_body.writeToFile(number_of_iterations);
                 //write_maximum_speed.writeToFile(number_of_iterations);
             }
+            
             number_of_iterations++;
-            if (number_of_iterations == 48)
+            if (number_of_iterations == 32)
             {
-                Real k = 1.0;
+               //write_real_body_states.writeToFile();
+                Real c = 1.0;
             }
-
-            write_real_body_states.writeToFile();
+            //write_real_body_states.writeToFile();
         }
         TickCount t2 = TickCount::now();
-        //write_real_body_states.writeToFile();
-        //write_maximum_speed.writeToFile(number_of_iterations);
+        write_real_body_states.writeToFile();
         TickCount t3 = TickCount::now();
         interval += t3 - t2;
     }
@@ -153,6 +159,5 @@ int main(int ac, char *av[])
     TimeInterval tt;
     tt = t4 - t1 - interval;
     cout << "Total wall time for computation: " << tt.seconds() << " seconds." << endl;
-    //write_total_viscous_force_on_inserted_body.testResult();
     return 0;
 }

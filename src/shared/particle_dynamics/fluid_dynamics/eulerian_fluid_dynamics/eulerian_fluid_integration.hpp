@@ -55,13 +55,7 @@ template <class RiemannSolverType>
 void EulerianIntegration1stHalf<Inner<>, RiemannSolverType>::update(size_t index_i, Real dt)
 {
     mom_[index_i] += (dmom_dt_[index_i] + force_prior_[index_i]) * dt;
-    vel_[index_i] = mom_[index_i] / mass_[index_i]; 
-    if (index_i == 2052)
-    {
-        Vecd veli = vel_[index_i];
-        Vecd momi = mom_[index_i];
-        Real x = 1;
-    }
+    vel_[index_i] = mom_[index_i] / mass_[index_i];
 }
 //=================================================================================================//
 template <class RiemannSolverType>
@@ -102,11 +96,14 @@ template <class RiemannSolverType>
 EulerianIntegration2ndHalf<Inner<>, RiemannSolverType>::
     EulerianIntegration2ndHalf(BaseInnerRelation &inner_relation, Real limiter_parameter)
     : EulerianIntegration<DataDelegateInner>(inner_relation),
-      riemann_solver_(this->fluid_, this->fluid_, limiter_parameter) {}
+      riemann_solver_(this->fluid_, this->fluid_, limiter_parameter)
+      ,vel_prof_(*particles_->getVariableByName<Vecd>("VelocityProfile")) 
+      {}
 //=================================================================================================//
 template <class RiemannSolverType>
 void EulerianIntegration2ndHalf<Inner<>, RiemannSolverType>::interaction(size_t index_i, Real dt)
 {
+    //vel_[index_i] = vel_prof_[index_i];
     FluidStateIn state_i(rho_[index_i], vel_[index_i], p_[index_i]);
     Real mass_change_rate = 0.0;
     Neighborhood &inner_neighborhood = inner_configuration_[index_i];
@@ -116,11 +113,12 @@ void EulerianIntegration2ndHalf<Inner<>, RiemannSolverType>::interaction(size_t 
         Vecd &e_ij = inner_neighborhood.e_ij_[n];
         Real dW_ijV_j = inner_neighborhood.dW_ij_[n] * Vol_[index_j];
 
+        //vel_[index_j] = vel_prof_[index_j];
         FluidStateIn state_j(rho_[index_j], vel_[index_j], p_[index_j]);
         FluidStateOut interface_state = riemann_solver_.InterfaceState(state_i, state_j, e_ij);
         mass_change_rate -= 2.0 * Vol_[index_i] * (interface_state.rho_ * interface_state.vel_).dot(e_ij) * dW_ijV_j;
 
-        if (dt == 0.0024646820310076745 && index_i == 8)
+        if (dt == 0.0031620195497783477 && index_i == 6950)
         {
             Vecd veli = vel_[index_i];
             Vecd velj = vel_[index_j];
@@ -130,6 +128,7 @@ void EulerianIntegration2ndHalf<Inner<>, RiemannSolverType>::interaction(size_t 
             Real Volj = Vol_[index_j];
             Real rhoi = rho_[index_i];
             Real rhoj = rho_[index_j];
+            Real mass = mass_[index_i];
             Real f = 10.0;
         }
 
