@@ -22,11 +22,10 @@ namespace SPH
             EulerianIntegration1stHalfRANS(BaseInnerRelation& inner_relation, Real limiter_parameter)
             : EulerianIntegrationRANS<DataDelegateInner>(inner_relation),
             riemann_solver_(this->fluid_, this->fluid_, limiter_parameter), 
-            Kprof_(*particles_->getVariableByName<Real>("TKEProfile")),
-            Epsprof_(*particles_->getVariableByName<Real>("DissipationProfile")),
-            mu_tprof_(*particles_->getVariableByName<Real>("TurblunetViscosityProfile"))
-            ,vel_prof_(*particles_->getVariableByName<Vecd>("VelocityProfile")),
-            meanvel_advection_(*this->particles_->template registerSharedVariable<Vecd>("MomentumAdvection")),
+            K_(*particles_->getVariableByName<Real>("TKE")),
+            Eps_(*particles_->getVariableByName<Real>("Dissipation")),
+            mu_t_(*particles_->getVariableByName<Real>("TurbulentViscosity"))
+            , meanvel_advection_(*this->particles_->template registerSharedVariable<Vecd>("MomentumAdvection")),
             viscous_dissipation_(*this->particles_->template registerSharedVariable<Vecd>("MomentumViscousDissipation")),
             pressuregrad_(*this->particles_->template registerSharedVariable<Vecd>("MomentumPressureGradient")),
             tkegrad_(*this->particles_->template registerSharedVariable<Vecd>("MomentumTKEGradient")),
@@ -37,7 +36,7 @@ namespace SPH
         template <class RiemannSolverType>
         void EulerianIntegration1stHalfRANS<Inner<>, RiemannSolverType>::interaction(size_t index_i, Real dt)
         {
-            //vel_[index_i] = vel_prof_[index_i];
+            //mu_t_[index_i] = rho_[index_i] * Cmu_ * ((K_[index_i] * K_[index_i]) / (Eps_[index_i]));
             FluidStateIn state_i(rho_[index_i], vel_[index_i], p_[index_i]);
             Vecd momentum_change_rate = Vecd::Zero();
             Neighborhood &inner_neighborhood = inner_configuration_[index_i];
@@ -51,8 +50,8 @@ namespace SPH
                 Real dW_ij = inner_neighborhood.dW_ij_[n];
                 Vecd &e_ij = inner_neighborhood.e_ij_[n];
                 Real &r_ij = inner_neighborhood.r_ij_[n];
-                Real mu_t_avg = (2.0 * mu_tprof_[index_i] * mu_tprof_[index_j]) / (mu_tprof_[index_i] + mu_tprof_[index_j] + TinyReal);
-                //vel_[index_j] = vel_prof_[index_j];
+                Real mu_t_avg = (2.0 * mu_t_[index_i] * mu_t_[index_j]) / (mu_t_[index_i] + mu_t_[index_j] + TinyReal);
+                
                 FluidStateIn state_j(rho_[index_j], vel_[index_j], p_[index_j]);
                 FluidStateOut interface_state = riemann_solver_.InterfaceState(state_i, state_j, e_ij);
                 
@@ -61,7 +60,7 @@ namespace SPH
                 //viscous_dissipation_[index_i] += Vol_[index_i] * dW_ij * Vol_[index_j] * ((fluid_.ReferenceViscosity() + mu_t_avg) * (vel_gradient_mat_[index_i])) * e_ij;
                 pressuregrad_[index_i] += Vol_[index_i] * 2.0 * (-dW_ij * Vol_[index_j] * (interface_state.p_) * Matd::Identity()) * e_ij;
                 //pressuregrad = dW_ij * Vol_[index_j] * (p_[index_i] + p_[index_j]) * Matd::Identity();
-                tkegrad_[index_i] += Vol_[index_i] * 2.0 * (-dW_ij * Vol_[index_j] * interface_state.rho_ * (2.0 / 3.0) * (Kprof_[index_i] - Kprof_[index_j]) * Matd::Identity()) * e_ij;
+                tkegrad_[index_i] += Vol_[index_i] * 2.0 * (-dW_ij * Vol_[index_j] * interface_state.rho_ * (2.0 / 3.0) * (K_[index_j] - K_[index_i]) * Matd::Identity()) * e_ij;
                 //rey_stresstensor = 2.0 * mu_t_[index_i] * dW_ij * Vol_[index_j] * (meanvelocitylaplacian + meanvelocitylaplacian.transpose()) / r_ij
                                 //- (2.0 / 3.0) * dW_ij * Vol_[index_j] * (interface_state.rho_ * (K_[index_i]) * Matd::Identity());
                 //rey_stresstensor = mu_t_[index_i] * dW_ij * dW_ij * Vol_[index_j] * Vol_[index_j] * (meanvelocitylaplacian + meanvelocitylaplacian.transpose())
@@ -75,8 +74,8 @@ namespace SPH
                     Vecd velj = vel_[index_j];
                     Real rhoi = rho_[index_i];
                     Real rhoj = rho_[index_j];
-                    Real muti = mu_tprof_[index_i];
-                    Real mutj = mu_tprof_[index_j];
+                    Real muti = mu_t_[index_i];
+                    Real mutj = mu_t_[index_j];
                     Vecd adv = meanvel_advection_[index_i];
                     Vecd vis = viscous_dissipation_[index_i];
                     Vecd prgrd = pressuregrad_[index_i];

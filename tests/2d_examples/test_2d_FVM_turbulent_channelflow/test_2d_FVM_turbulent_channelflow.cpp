@@ -35,7 +35,7 @@ int main(int ac, char *av[])
     //	Define body relation map.
     //----------------------------------------------------------------------
     InnerRelationInFVM water_block_inner(water_block, read_mesh_data);
-    SimpleDynamics<fluid_dynamics::Kepsprofiles> profiles(water_block_inner, meshdatapath);
+    //SimpleDynamics<fluid_dynamics::Kepsprofiles> profiles(water_block_inner, meshdatapath);
     SimpleDynamics<TCFInitialCondition> initial_condition(water_block);
     //SimpleDynamics<fluid_dynamics::WallAdjacentCells> wall_adj_cell(water_block_inner, ghost_creation);
     //----------------------------------------------------------------------
@@ -52,17 +52,17 @@ int main(int ac, char *av[])
     TCFBoundaryConditionSetup boundary_condition_setup(water_block_inner, ghost_creation);
     /** Time step size with considering sound wave speed. */
     ReduceDynamics<fluid_dynamics::WCAcousticTimeStepSizeInFVM> get_fluid_time_step_size(water_block, read_mesh_data.MinMeshEdge());
-    InteractionWithUpdate<LinearGradientCorrectionMatrixInner> kernel_correction_matrix(water_block_inner);
-    InteractionDynamics<KernelGradientCorrectionInner> kernel_gradient_update(water_block_inner);
+    //InteractionWithUpdate<LinearGradientCorrectionMatrixInner> kernel_correction_matrix(water_block_inner);
+    //InteractionDynamics<KernelGradientCorrectionInner> kernel_gradient_update(water_block_inner);
    // visualization in FVM with data in cell
     BodyStatesRecordingInMeshToVtp write_real_body_states(water_block, read_mesh_data);
     ReducedQuantityRecording<MaximumSpeed> write_maximum_speed(water_block);
 
-    profiles.exec();
+    //profiles.exec();
     initial_condition.exec();
     //wall_adj_cell.exec();
-    kernel_correction_matrix.exec();
-    kernel_gradient_update.exec();
+    //kernel_correction_matrix.exec();
+    //kernel_gradient_update.exec();
     water_block_inner.updateConfiguration();
     water_block.addBodyStateForRecording<Vecd>("Velocity");
     water_block.addBodyStateForRecording<Real>("Density");
@@ -70,9 +70,6 @@ int main(int ac, char *av[])
     water_block.addBodyStateForRecording<Real>("TKE");
     water_block.addBodyStateForRecording<Real>("Dissipation");
     water_block.addBodyStateForRecording<Real>("TurbulentViscosity");
-    water_block.addBodyStateForRecording<Real>("TKEProfile");
-    water_block.addBodyStateForRecording<Real>("DissipationProfile");
-    water_block.addBodyStateForRecording<Real>("TurblunetViscosityProfile");
     water_block.addBodyStateForRecording<Real>("TKEProduction");
     water_block.addBodyStateForRecording<Real>("TKEChangeRate");
     water_block.addBodyStateForRecording<Real>("DissipationChangeRate");
@@ -82,7 +79,6 @@ int main(int ac, char *av[])
     water_block.addBodyStateForRecording<Real>("DissipationLaplacian");
     water_block.addBodyStateForRecording<Real>("DissipationProdscalar");
     water_block.addBodyStateForRecording<Real>("DissipationScalar");
-    water_block.addBodyStateForRecording<Vecd>("VelocityProfile");
     water_block.addBodyStateForRecording<Real>("WallShearStress");
     water_block.addBodyStateForRecording<Vecd>("Momentum");
     water_block.addBodyStateForRecording<Vecd>("MomentumChangeRate");
@@ -148,10 +144,10 @@ int main(int ac, char *av[])
                //write_real_body_states.writeToFile();
                 Real c = 1.0;
             }
-            //write_real_body_states.writeToFile();
+            write_real_body_states.writeToFile();
         }
         TickCount t2 = TickCount::now();
-        write_real_body_states.writeToFile();
+        //write_real_body_states.writeToFile();
         TickCount t3 = TickCount::now();
         interval += t3 - t2;
     }

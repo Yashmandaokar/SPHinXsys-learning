@@ -69,14 +69,14 @@ class TCFInitialCondition
     public:
         explicit TCFInitialCondition(SPHBody& sph_body)
             : FluidInitialCondition(sph_body), C_mu_(0.09), Vol_(*particles_->getVariableByName<Real>("VolumetricMeasure")),
-            rho_(*particles_->getVariableByName<Real>("Density")), vel_prof_(*particles_->getVariableByName<Vecd>("VelocityProfile")),
-            p_(*particles_->getVariableByName<Real>("Pressure"))
+            rho_(*particles_->getVariableByName<Real>("Density"))
         {
             //particles_->registerVariable(p_, "Pressure");
             particles_->registerVariable(K_, "TKE");
             particles_->registerVariable(Eps_, "Dissipation");
             particles_->registerVariable(mu_t_, "TurbulentViscosity");
             particles_->registerVariable(meanvelocity_, "MeanVelocity");
+            particles_->registerVariable(p_, "Pressure");
         };
 
     void update(size_t index_i, Real dt)
@@ -91,9 +91,9 @@ class TCFInitialCondition
         mu_t_[index_i] = mu_f * viscosityRatio;
     }
 protected:
-    Real C_mu_;
-    StdLargeVec<Vecd> meanvelocity_, &vel_prof_;
-    StdLargeVec<Real> mu_t_, &Vol_, K_, Eps_, &rho_, &p_;
+  Real C_mu_;
+  StdLargeVec<Vecd> meanvelocity_;
+  StdLargeVec<Real> mu_t_, &Vol_, K_, Eps_, &rho_, p_;
 };
 
 //----------------------------------------------------------------------
@@ -105,10 +105,9 @@ public:
 
     TCFBoundaryConditionSetup(BaseInnerRelationInFVM& inner_relation, GhostCreationFromMesh& ghost_creation)
         :BoundaryConditionSetupInFVM(inner_relation, ghost_creation),
-        fluid_(DynamicCast<WeaklyCompressibleFluid>(this, particles_->getBaseMaterial())), Kprof_(*particles_->getVariableByName<Real>("TKEProfile")), 
-        Epsprof_(*particles_->getVariableByName<Real>("DissipationProfile")), 
-        mu_tprof_(*particles_->getVariableByName<Real>("TurblunetViscosityProfile"))
-        ,vel_prof_(*particles_->getVariableByName<Vecd>("VelocityProfile")) 
+        fluid_(DynamicCast<WeaklyCompressibleFluid>(this, particles_->getBaseMaterial())), K_(*particles_->getVariableByName<Real>("TKE")), 
+        Eps_(*particles_->getVariableByName<Real>("Dissipation")), 
+        mu_t_(*particles_->getVariableByName<Real>("TurbulentViscosity"))
         ,C_mu_(0.09){};
     virtual ~TCFBoundaryConditionSetup() {};
 
@@ -118,9 +117,9 @@ public:
         vel_[ghost_index] = -vel_[index_i];
         p_[ghost_index] = p_[index_i];
         rho_[ghost_index] = rho_[index_i];
-        Kprof_[ghost_index] = Kprof_[index_i];
-        Epsprof_[ghost_index] = Epsprof_[index_i];
-        mu_tprof_[ghost_index] = mu_tprof_[index_i];
+        K_[ghost_index] = K_[index_i];
+        Eps_[ghost_index] = Eps_[index_i];
+        mu_t_[ghost_index] = mu_t_[index_i];
     }
     void applyVelocityInletFlow(size_t ghost_index, size_t index_i) override
     {
@@ -129,25 +128,24 @@ public:
         vel_[ghost_index] = far_field_velocity;
         p_[ghost_index] = p_[index_i];
         rho_[ghost_index] = rho_[index_i];
-        Kprof_[ghost_index] = (3.0 / 2.0) * (vel_[ghost_index].squaredNorm()) * (I * I);
-        Epsprof_[ghost_index] = rho_[index_i] * C_mu_ * ((Kprof_[ghost_index] * Kprof_[ghost_index]) / (mu_f)) * (1 / viscosityRatio);
-        mu_tprof_[ghost_index] = mu_f * viscosityRatio;
+        K_[ghost_index] = (3.0 / 2.0) * (vel_[ghost_index].squaredNorm()) * (I * I);
+        Eps_[ghost_index] = rho_[index_i] * C_mu_ * ((K_[ghost_index] * K_[ghost_index]) / (mu_f)) * (1 / viscosityRatio);
+        mu_t_[ghost_index] = mu_f * viscosityRatio;
     }
     void applyPressureOutletBC(size_t ghost_index, size_t index_i) override
     {
         vel_[ghost_index] = vel_[index_i];
         p_[ghost_index] = 0.0;
         rho_[ghost_index] = rho_[index_i];
-        Kprof_[ghost_index] = Kprof_[index_i];
-        Epsprof_[ghost_index] = Epsprof_[index_i];
-        mu_tprof_[ghost_index] = mu_tprof_[index_i];
+        K_[ghost_index] = K_[index_i];
+        Eps_[ghost_index] = Eps_[index_i];
+        mu_t_[ghost_index] = mu_t_[index_i];
         //K_[ghost_index] = (3.0 / 2.0) * (vel_[index_i].squaredNorm()) * (I * I);
         //Eps_[ghost_index] = rho_[index_i] * C_mu_ * ((K_[index_i] * K_[index_i]) / (mu_f)) * (1 / viscosityRatio);
         //mu_t_[ghost_index] = mu_t_[index_i];
     }
 protected:
-    StdLargeVec<Real> &Epsprof_, &Kprof_, &mu_tprof_;
-    StdLargeVec<Vecd> &vel_prof_;
+    StdLargeVec<Real> &Eps_, &K_, &mu_t_;
     Fluid& fluid_;
     Real C_mu_;
 };

@@ -43,8 +43,8 @@ namespace SPH
 
         protected:
             RiemannSolverType riemann_solver_;
-            StdLargeVec<Real> &Kprof_, &Epsprof_, &mu_tprof_;
-            StdLargeVec<Vecd> &vel_prof_, &meanvel_advection_, &viscous_dissipation_, &pressuregrad_, &tkegrad_;
+            StdLargeVec<Real> &K_, &Eps_, &mu_t_;
+            StdLargeVec<Vecd> &meanvel_advection_, &viscous_dissipation_, &pressuregrad_, &tkegrad_;
             StdLargeVec<Matd> &vel_gradient_mat_;
         };
         using EulerianIntegration1stHalfInnerRiemannRANS = EulerianIntegration1stHalfRANS<Inner<>, AcousticRiemannSolver>;

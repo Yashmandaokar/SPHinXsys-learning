@@ -97,7 +97,6 @@ EulerianIntegration2ndHalf<Inner<>, RiemannSolverType>::
     EulerianIntegration2ndHalf(BaseInnerRelation &inner_relation, Real limiter_parameter)
     : EulerianIntegration<DataDelegateInner>(inner_relation),
       riemann_solver_(this->fluid_, this->fluid_, limiter_parameter)
-      ,vel_prof_(*particles_->getVariableByName<Vecd>("VelocityProfile")) 
       {}
 //=================================================================================================//
 template <class RiemannSolverType>

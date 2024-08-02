@@ -34,7 +34,7 @@ namespace SPH
             
 
             protected:
-            StdLargeVec<Vecd> &mom_, &dmom_dt_, &vel_prof_;
+            StdLargeVec<Vecd> &mom_, &dmom_dt_;
             StdLargeVec<Real>& dmass_dt_;
             StdLargeVec<Real> &K_prod_p_, &K_prod_, &Eps_p_, &Eps_sum_, &K_adv_, &K_lap_;
             StdLargeVec<Real> &Eps_adv_, &Eps_lap_, &Eps_prodscalar_, &Eps_scalar_, &Tau_wall_;
@@ -42,8 +42,6 @@ namespace SPH
             Real sigmaeps_, C1eps_, C2eps_;
             StdLargeVec<Real> &K_, &Eps_, &mu_t_;
             GhostCreationFromMesh& ghost_creator_;
-            StdLargeVec<Real> &Kprof_, &Epsprof_, &mu_tprof_;
-            
         };
         //=================================================================================================//
         /*
