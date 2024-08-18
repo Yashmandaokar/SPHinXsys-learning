@@ -11,7 +11,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/regression_test_tool/
         DESTINATION ${BUILD_INPUT_PATH})
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/L120MRefined1.msh
         DESTINATION ${BUILD_INPUT_PATH})
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/L120MRefined1_Data.txt
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/DatawithPr.txt
         DESTINATION ${BUILD_INPUT_PATH})
 
 

@@ -63,6 +63,7 @@ void GhostCreationFromMesh::addGhostParticleAndSetInConfiguration()
                     normal_vector = -normal_vector;
                 };
                 each_boundary_type_with_all_ghosts_eij_[boundary_type].push_back(normal_vector);
+                each_boundary_type_face_area_[boundary_type].push_back(interface_area_size);
             }
         }
     }

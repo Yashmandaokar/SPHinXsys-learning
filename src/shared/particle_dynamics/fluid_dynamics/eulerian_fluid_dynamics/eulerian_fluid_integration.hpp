@@ -116,19 +116,11 @@ void EulerianIntegration2ndHalf<Inner<>, RiemannSolverType>::interaction(size_t 
         FluidStateIn state_j(rho_[index_j], vel_[index_j], p_[index_j]);
         FluidStateOut interface_state = riemann_solver_.InterfaceState(state_i, state_j, e_ij);
         mass_change_rate -= 2.0 * Vol_[index_i] * (interface_state.rho_ * interface_state.vel_).dot(e_ij) * dW_ijV_j;
-
-        if (dt == 0.0031620195497783477 && index_i == 6950)
+        if (index_i == 2732)
         {
-            Vecd veli = vel_[index_i];
-            Vecd velj = vel_[index_j];
-            Vecd veldiff = veli - velj;
-            Vecd vel = veli + velj;
-            Real Voli = Vol_[index_i];
-            Real Volj = Vol_[index_j];
-            Real rhoi = rho_[index_i];
-            Real rhoj = rho_[index_j];
-            Real mass = mass_[index_i];
-            Real f = 10.0;
+            Real voli = Vol_[index_i];
+            Real volj = Vol_[index_j];
+            Real c = 1.0;
         }
 
     }
@@ -141,6 +133,13 @@ void EulerianIntegration2ndHalf<Inner<>, RiemannSolverType>::update(size_t index
     mass_[index_i] += dmass_dt_[index_i] * dt;
     rho_[index_i] = mass_[index_i] / Vol_[index_i];
     p_[index_i] = fluid_.getPressure(rho_[index_i]);
+    if (index_i == 2732)
+    {
+        Real mass = mass_[index_i];
+        Real rhoi = rho_[index_i];
+        Real pi = p_[index_i];
+        Real c = 1.0;
+    }
     if (mass_[index_i] < 0)
     {
         Real pr = p_[index_i];

@@ -19,6 +19,7 @@ GhostCreationFromMesh::GhostCreationFromMesh(RealBody &real_body, ANSYSMesh &ans
     each_boundary_type_with_all_ghosts_index_.resize(50);
     each_boundary_type_with_all_ghosts_eij_.resize(50);
     each_boundary_type_contact_real_index_.resize(50);
+    each_boundary_type_face_area_.resize(50);
     addGhostParticleAndSetInConfiguration();
 }
 //=================================================================================================//

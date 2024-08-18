@@ -22,14 +22,18 @@ namespace SPH
             EulerianIntegration1stHalfRANS(BaseInnerRelation& inner_relation, Real limiter_parameter)
             : EulerianIntegrationRANS<DataDelegateInner>(inner_relation),
             riemann_solver_(this->fluid_, this->fluid_, limiter_parameter), 
-            K_(*particles_->getVariableByName<Real>("TKE")),
-            Eps_(*particles_->getVariableByName<Real>("Dissipation")),
-            mu_t_(*particles_->getVariableByName<Real>("TurbulentViscosity"))
+            Kprof_(*particles_->getVariableByName<Real>("TKEProfile")),
+            Epsprof_(*particles_->getVariableByName<Real>("DissipationProfile")),
+            mu_tprof_(*particles_->getVariableByName<Real>("TurblunetViscosityProfile"))
             , meanvel_advection_(*this->particles_->template registerSharedVariable<Vecd>("MomentumAdvection")),
             viscous_dissipation_(*this->particles_->template registerSharedVariable<Vecd>("MomentumViscousDissipation")),
             pressuregrad_(*this->particles_->template registerSharedVariable<Vecd>("MomentumPressureGradient")),
             tkegrad_(*this->particles_->template registerSharedVariable<Vecd>("MomentumTKEGradient")),
-            vel_gradient_mat_(*particles_->getVariableByName<Matd>("VelocityGradient"))
+            vel_gradient_mat_(*particles_->getVariableByName<Matd>("VelocityGradient")),
+            walladjacentcellflag_(*particles_->getVariableByName<Real>("FlagForWallAdjacentCells")),
+            Tau_wall_(*particles_->getVariableByName<Real>("WallShearStress")),
+            wallfacearea_(*particles_->getVariableByName<Real>("WallFaceArea")),
+            shear_force_(*this->particles_->template registerSharedVariable<Vecd>("ShearForce"))
             {}
         //=================================================================================================//
 
@@ -42,7 +46,8 @@ namespace SPH
             Neighborhood &inner_neighborhood = inner_configuration_[index_i];
             //Matd rey_stresstensor = Matd::Zero();
             meanvel_advection_[index_i] = Vecd::Zero(), pressuregrad_[index_i] = Vecd::Zero(), tkegrad_[index_i] = Vecd::Zero();
-            viscous_dissipation_[index_i] = Vecd::Zero();
+            viscous_dissipation_[index_i] = Vecd::Zero(), shear_force_[index_i] = Vecd::Zero();
+            Vecd flow_vector(1.0, 0.0);
            
             for (size_t n = 0; n != inner_neighborhood.current_size_; ++n)
             {
@@ -50,37 +55,33 @@ namespace SPH
                 Real dW_ij = inner_neighborhood.dW_ij_[n];
                 Vecd &e_ij = inner_neighborhood.e_ij_[n];
                 Real &r_ij = inner_neighborhood.r_ij_[n];
-                Real mu_t_avg = (2.0 * mu_t_[index_i] * mu_t_[index_j]) / (mu_t_[index_i] + mu_t_[index_j] + TinyReal);
+                Real mu_t_avg = (2.0 * mu_tprof_[index_i] * mu_tprof_[index_j]) / (mu_tprof_[index_i] + mu_tprof_[index_j] + TinyReal);
                 
                 FluidStateIn state_j(rho_[index_j], vel_[index_j], p_[index_j]);
                 FluidStateOut interface_state = riemann_solver_.InterfaceState(state_i, state_j, e_ij);
+
                 
                 meanvel_advection_[index_i] += Vol_[index_i] * 2.0 * (-dW_ij * Vol_[index_j] * (interface_state.rho_ * (interface_state.vel_) * (interface_state.vel_).transpose())) * e_ij;
-                viscous_dissipation_[index_i] += Vol_[index_i] * (2.0 * (fluid_.ReferenceViscosity() + mu_t_avg) * dW_ij * Vol_[index_j]) * (interface_state.vel_) / r_ij;
-                //viscous_dissipation_[index_i] += Vol_[index_i] * dW_ij * Vol_[index_j] * ((fluid_.ReferenceViscosity() + mu_t_avg) * (vel_gradient_mat_[index_i])) * e_ij;
                 pressuregrad_[index_i] += Vol_[index_i] * 2.0 * (-dW_ij * Vol_[index_j] * (interface_state.p_) * Matd::Identity()) * e_ij;
-                //pressuregrad = dW_ij * Vol_[index_j] * (p_[index_i] + p_[index_j]) * Matd::Identity();
-                tkegrad_[index_i] += Vol_[index_i] * 2.0 * (-dW_ij * Vol_[index_j] * interface_state.rho_ * (2.0 / 3.0) * (K_[index_j] - K_[index_i]) * Matd::Identity()) * e_ij;
-                //rey_stresstensor = 2.0 * mu_t_[index_i] * dW_ij * Vol_[index_j] * (meanvelocitylaplacian + meanvelocitylaplacian.transpose()) / r_ij
-                                //- (2.0 / 3.0) * dW_ij * Vol_[index_j] * (interface_state.rho_ * (K_[index_i]) * Matd::Identity());
-                //rey_stresstensor = mu_t_[index_i] * dW_ij * dW_ij * Vol_[index_j] * Vol_[index_j] * (meanvelocitylaplacian + meanvelocitylaplacian.transpose())
-                                 //- (2.0 / 3.0) * dW_ij * Vol_[index_j] * (interface_state.rho_ * (K_[index_i]) * Matd::Identity());
-                momentum_change_rate =  meanvel_advection_[index_i] + pressuregrad_[index_i] + tkegrad_[index_i] + viscous_dissipation_[index_i];
-     
-                //Vecd momrate = adv + prgrad + Kgrad + visdiss;
-                if (index_i == 20428)
-                {
-                    Vecd veli = vel_[index_i];
-                    Vecd velj = vel_[index_j];
-                    Real rhoi = rho_[index_i];
-                    Real rhoj = rho_[index_j];
-                    Real muti = mu_t_[index_i];
-                    Real mutj = mu_t_[index_j];
+                tkegrad_[index_i] += Vol_[index_i] * 2.0 * (-dW_ij * Vol_[index_j] * interface_state.rho_ * (2.0 / 3.0) * (Kprof_[index_i]  - Kprof_[index_j]) * Matd::Identity()) * e_ij;
+                viscous_dissipation_[index_i] += Vol_[index_i] * (2.0 * (fluid_.ReferenceViscosity() + mu_t_avg) * dW_ij * Vol_[index_j]) * (vel_[index_i] - vel_[index_j]) / r_ij;
+                //shear_force_[index_i] += -Tau_wall_[index_j] * wallfacearea_[index_i] * flow_vector;
+                
+                momentum_change_rate = meanvel_advection_[index_i] + pressuregrad_[index_i] + tkegrad_[index_i] + viscous_dissipation_[index_i];
+
+                if (index_i == 2732)
+                { 
+                    Vecd visdiss = viscous_dissipation_[index_i];
+                    Vecd prgrad = pressuregrad_[index_i];
                     Vecd adv = meanvel_advection_[index_i];
-                    Vecd vis = viscous_dissipation_[index_i];
-                    Vecd prgrd = pressuregrad_[index_i];
-                    Real X = 1.0;
+                    Vecd tkegrad = tkegrad_[index_i];
+                    Real tau = Tau_wall_[index_j];
+                    Real wallarea = wallfacearea_[index_i];
+                    Real voli = Vol_[index_i];
+                    Real volj = Vol_[index_j];
+                    Real c = 1.0;
                 }
+                
             }
             dmom_dt_[index_i] = momentum_change_rate;
         }
@@ -91,6 +92,12 @@ namespace SPH
             mom_[index_i] += (dmom_dt_[index_i] +  force_prior_[index_i]) * dt;
             vel_[index_i] = mom_[index_i] / mass_[index_i];
 
+            if (index_i == 2732)
+            {
+                Vecd veli = vel_[index_i];
+                Vecd momi = mom_[index_i];
+                Real c = 1.0;
+            }
           if (std::isnan(mom_[index_i].norm()))
             {
                 Vecd momi = mom_[index_i];

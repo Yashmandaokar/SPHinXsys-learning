@@ -20,7 +20,7 @@ namespace SPH
             void meshdata(const std::string &meshdatafull_path);
 
             protected:
-            StdLargeVec<Real> x_coords_, y_coords_, tke_profile_, dissipation_profile_, mu_t_profile_;
+            StdLargeVec<Real> x_coords_, y_coords_, tke_profile_, dissipation_profile_, mu_t_profile_, p;
             StdLargeVec<Real> &Kprof_, &Epsprof_, &mu_tprof_;
             StdLargeVec<Vecd> &vel_prof_;
             StdLargeVec<Real> x_velocity_profile_, y_velocity_profile_;
@@ -40,6 +40,7 @@ namespace SPH
             StdLargeVec<Real> &Eps_adv_, &Eps_lap_, &Eps_prodscalar_, &Eps_scalar_, &Tau_wall_;
             Real Cmu_, sigmak_;
             Real sigmaeps_, C1eps_, C2eps_;
+            StdLargeVec<Real> &Kprof_, &Epsprof_, &mu_tprof_;
             StdLargeVec<Real> &K_, &Eps_, &mu_t_;
             GhostCreationFromMesh& ghost_creator_;
         };
@@ -69,7 +70,7 @@ namespace SPH
            virtual ~WallAdjacentCells(){};
 
          protected:
-           StdLargeVec<Real> walladjacentindex_, &walladjacentcellflag_, wallghostindex_;
+           StdLargeVec<Real> walladjacentindex_, &walladjacentcellflag_, wallghostindex_, &wallfacearea_;
            StdLargeVec<Vecd> walleij_;
 
            void walladjacentcellyp();

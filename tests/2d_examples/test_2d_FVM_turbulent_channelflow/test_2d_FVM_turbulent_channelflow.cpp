@@ -35,7 +35,7 @@ int main(int ac, char *av[])
     //	Define body relation map.
     //----------------------------------------------------------------------
     InnerRelationInFVM water_block_inner(water_block, read_mesh_data);
-    //SimpleDynamics<fluid_dynamics::Kepsprofiles> profiles(water_block_inner, meshdatapath);
+    SimpleDynamics<fluid_dynamics::Kepsprofiles> profiles(water_block_inner, meshdatapath);
     SimpleDynamics<TCFInitialCondition> initial_condition(water_block);
     //SimpleDynamics<fluid_dynamics::WallAdjacentCells> wall_adj_cell(water_block_inner, ghost_creation);
     //----------------------------------------------------------------------
@@ -44,11 +44,17 @@ int main(int ac, char *av[])
     //----------------------------------------------------------------------
     /** Here we introduce the limiter in the Riemann solver and 0 means the no extra numerical dissipation.
     the value is larger, the numerical dissipation larger*/
+    
+    /*
+    TimeDependentAcceleration time_dependent_acceleration(Vec2d::Zero());
+    SimpleDynamics<GravityForce> apply_gravity_force(water_block, time_dependent_acceleration);
+    */
+    
     InteractionWithUpdate<fluid_dynamics::KEpsilonStd1stHalf> tke(water_block_inner, ghost_creation);
     InteractionWithUpdate<fluid_dynamics::KEpsilonStd2ndHalf> dissipationrate(water_block_inner, ghost_creation);
     //InteractionDynamics<fluid_dynamics::StdWallFunctionFVM> wall_function(water_block_inner, ghost_creation);
-    InteractionWithUpdate<fluid_dynamics::EulerianIntegration1stHalfInnerRiemannRANS> pressure_relaxation(water_block_inner, 200);
-    InteractionWithUpdate<fluid_dynamics::EulerianIntegration2ndHalfInnerRiemann> density_relaxation(water_block_inner, 20000);
+    InteractionWithUpdate<fluid_dynamics::EulerianIntegration1stHalfInnerRiemannRANS> pressure_relaxation(water_block_inner, 1.0);
+    InteractionWithUpdate<fluid_dynamics::EulerianIntegration2ndHalfInnerRiemann> density_relaxation(water_block_inner, 10000.0);
     TCFBoundaryConditionSetup boundary_condition_setup(water_block_inner, ghost_creation);
     /** Time step size with considering sound wave speed. */
     ReduceDynamics<fluid_dynamics::WCAcousticTimeStepSizeInFVM> get_fluid_time_step_size(water_block, read_mesh_data.MinMeshEdge());
@@ -58,8 +64,8 @@ int main(int ac, char *av[])
     BodyStatesRecordingInMeshToVtp write_real_body_states(water_block, read_mesh_data);
     ReducedQuantityRecording<MaximumSpeed> write_maximum_speed(water_block);
 
-    //profiles.exec();
     initial_condition.exec();
+    profiles.exec();
     //wall_adj_cell.exec();
     //kernel_correction_matrix.exec();
     //kernel_gradient_update.exec();
@@ -69,7 +75,10 @@ int main(int ac, char *av[])
     water_block.addBodyStateForRecording<Real>("Pressure");
     water_block.addBodyStateForRecording<Real>("TKE");
     water_block.addBodyStateForRecording<Real>("Dissipation");
-    water_block.addBodyStateForRecording<Real>("TurbulentViscosity");
+    water_block.addBodyStateForRecording<Real>("TurblunetViscosity");
+    water_block.addBodyStateForRecording<Real>("TKEProfile");
+    water_block.addBodyStateForRecording<Real>("DissipationProfile");
+    water_block.addBodyStateForRecording<Real>("TurblunetViscosityProfile");
     water_block.addBodyStateForRecording<Real>("TKEProduction");
     water_block.addBodyStateForRecording<Real>("TKEChangeRate");
     water_block.addBodyStateForRecording<Real>("DissipationChangeRate");
@@ -94,13 +103,14 @@ int main(int ac, char *av[])
     water_block.addBodyStateForRecording<Real>("dvdx");
     water_block.addBodyStateForRecording<Real>("dvdy");
     water_block.addBodyStateForRecording<Matd>("VelocityGradient");
+    water_block.addBodyStateForRecording<Vecd>("ShearForce");
     //----------------------------------------------------------------------
     //	Setup for time-stepping control
     //----------------------------------------------------------------------
     size_t number_of_iterations = 0;
     int screen_output_interval = 5000;
-    Real end_time = 800.0;
-    Real output_interval = 0.5; /**< time stamps for output. */
+    Real end_time = 400.0;
+    Real output_interval = 5.0; /**< time stamps for output. */
     //----------------------------------------------------------------------
     //	Statistics for CPU time
     //----------------------------------------------------------------------
@@ -118,6 +128,7 @@ int main(int ac, char *av[])
         Real integration_time = 0.0;
         while (integration_time < output_interval)
         {
+            //apply_gravity_force.exec();
             Real dt = get_fluid_time_step_size.exec();
             boundary_condition_setup.resetBoundaryConditions();
             tke.exec(dt);
@@ -139,15 +150,17 @@ int main(int ac, char *av[])
             }
             
             number_of_iterations++;
-            if (number_of_iterations == 32)
+            if (number_of_iterations == 4)
             {
                //write_real_body_states.writeToFile();
                 Real c = 1.0;
             }
-            write_real_body_states.writeToFile();
+            //write_real_body_states.writeToFile();
+            //write_maximum_speed.writeToFile(number_of_iterations);
         }
         TickCount t2 = TickCount::now();
-        //write_real_body_states.writeToFile();
+         write_real_body_states.writeToFile();
+        //write_maximum_speed.writeToFile(number_of_iterations);
         TickCount t3 = TickCount::now();
         interval += t3 - t2;
     }

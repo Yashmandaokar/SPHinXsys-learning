@@ -60,6 +60,7 @@ class GhostCreationFromMesh : public DataDelegateSimple
     StdVec<StdVec<size_t>> each_boundary_type_with_all_ghosts_index_;
     StdVec<StdVec<Vecd>> each_boundary_type_with_all_ghosts_eij_;
     StdVec<StdVec<size_t>> each_boundary_type_contact_real_index_;
+    StdVec<StdVec<Real>> each_boundary_type_face_area_;
 };
 
 //----------------------------------------------------------------------
