@@ -45,8 +45,8 @@ int main(int ac, char *av[])
     //InteractionWithUpdate<fluid_dynamics::MeanVelocity> meanvelocity_relaxation(water_block_inner);
     //fluid_dynamics::WallAdjacentCells wall_adj_cell(water_block_inner, ghost_creation);
     
-    InteractionWithUpdate<fluid_dynamics::EulerianIntegration1stHalfInnerRiemann> pressure_relaxation(water_block_inner, 20000);
-    InteractionWithUpdate<fluid_dynamics::EulerianIntegration2ndHalfInnerRiemann> density_relaxation(water_block_inner, 20000);
+    InteractionWithUpdate<fluid_dynamics::EulerianIntegration1stHalfInnerRiemann> pressure_relaxation(water_block_inner, 200.0);
+    InteractionWithUpdate<fluid_dynamics::EulerianIntegration2ndHalfInnerRiemann> density_relaxation(water_block_inner, 200.0);
     TCFBoundaryConditionSetup boundary_condition_setup(water_block_inner, ghost_creation);
     /** Time step size with considering sound wave speed. */
     ReduceDynamics<fluid_dynamics::WCAcousticTimeStepSizeInFVM> get_fluid_time_step_size(water_block, read_mesh_data.MinMeshEdge());
@@ -54,19 +54,19 @@ int main(int ac, char *av[])
     //----------------------------------------------------------------------
 //	Compute the force exerted on solid body due to fluid pressure and viscosity
 //----------------------------------------------------------------------
-   // InteractionDynamics<fluid_dynamics::ViscousForceFromFluidInFVM> viscous_force_on_solid(water_block_inner, ghost_creation.each_boundary_type_contact_real_index_);
-    //InteractionDynamics<fluid_dynamics::PressureForceFromFluidInFVM<decltype(density_relaxation)>> pressure_force_on_solid(water_block_inner, ghost_creation.each_boundary_type_contact_real_index_);
+    InteractionDynamics<fluid_dynamics::ViscousForceFromFluidInFVM> viscous_force_on_solid(water_block_inner, ghost_creation.each_boundary_type_contact_real_index_);
+    InteractionDynamics<fluid_dynamics::PressureForceFromFluidInFVM<decltype(density_relaxation)>> pressure_force_on_solid(water_block_inner, ghost_creation.each_boundary_type_contact_real_index_);
    // visualization in FVM with data in cell
     BodyStatesRecordingInMeshToVtp write_real_body_states(water_block, read_mesh_data);
-    //RegressionTestDynamicTimeWarping<ReducedQuantityRecording<QuantitySummation<Vecd>>> write_total_viscous_force_on_inserted_body(water_block, "ViscousForceOnSolid");
-    //ReducedQuantityRecording<QuantitySummation<Vecd>> write_total_pressure_force_on_inserted_body(water_block, "PressureForceOnSolid");
+    RegressionTestDynamicTimeWarping<ReducedQuantityRecording<QuantitySummation<Vecd>>> write_total_viscous_force_on_inserted_body(water_block, "ViscousForceOnSolid");
+    ReducedQuantityRecording<QuantitySummation<Vecd>> write_total_pressure_force_on_inserted_body(water_block, "PressureForceOnSolid");
     ReducedQuantityRecording<MaximumSpeed> write_maximum_speed(water_block);
 
     initial_condition.exec();
     water_block_inner.updateConfiguration();
-    water_block.addBodyStateForRecording<Vecd>("Velocity");
-    water_block.addBodyStateForRecording<Real>("Density");
-    water_block.addBodyStateForRecording<Real>("Pressure");
+    write_real_body_states.addToWrite<Vecd>(water_block, "Velocity");
+    write_real_body_states.addToWrite<Real>(water_block, "Density");
+    write_real_body_states.addToWrite<Real>(water_block, "Pressure");
     write_real_body_states.writeToFile(0);
     //----------------------------------------------------------------------
     //	Setup for time-stepping control
@@ -106,10 +106,10 @@ int main(int ac, char *av[])
                 cout << fixed << setprecision(9) << "N=" << number_of_iterations << "	Time = "
                     << GlobalStaticVariables::physical_time_
                     << "	dt = " << dt << "\n";
-                //viscous_force_on_solid.exec();
-                //pressure_force_on_solid.exec();
-                //write_total_viscous_force_on_inserted_body.writeToFile(number_of_iterations);
-                //write_total_pressure_force_on_inserted_body.writeToFile(number_of_iterations);
+                viscous_force_on_solid.exec();
+                pressure_force_on_solid.exec();
+                write_total_viscous_force_on_inserted_body.writeToFile(number_of_iterations);
+                write_total_pressure_force_on_inserted_body.writeToFile(number_of_iterations);
                 write_maximum_speed.writeToFile(number_of_iterations);
             }
             number_of_iterations++;

@@ -9,7 +9,7 @@
 #define FVM_TURBULENT_CHANNEL_FLOW_H             
 #include "common_weakly_compressible_FVM_classes.h"
 #include "TurbulenceModel.h"
-#include "rans_fluid_integration.hpp"
+#include "rans_dynamics.hpp"
 using namespace SPH;
 using namespace std;
 //----------------------------------------------------------------------
@@ -68,37 +68,37 @@ class TCFInitialCondition
 {
     public:
         explicit TCFInitialCondition(SPHBody& sph_body)
-            : FluidInitialCondition(sph_body), C_mu_(0.09), Vol_(*particles_->getVariableByName<Real>("VolumetricMeasure")),
-            rho_(*particles_->getVariableByName<Real>("Density")), p_(*particles_->getVariableByName<Real>("Pressure"))
-        {
-            //particles_->registerVariable(p_, "Pressure");
-            particles_->registerVariable(K_, "TKE");
-            particles_->registerVariable(Eps_, "Dissipation");
-            particles_->registerVariable(mu_t_, "TurblunetViscosity");
-            particles_->registerVariable(meanvelocity_, "MeanVelocity");
-        };
+          : FluidInitialCondition(sph_body), C_mu_(0.09), Vol_(*this->particles_->template getVariableDataByName<Real>("VolumetricMeasure")),
+            K_(*this->particles_->template registerSharedVariable<Real>("TKE")),
+            Eps_(*this->particles_->template registerSharedVariable<Real>("Dissipation")),
+            mu_t_(*this->particles_->template registerSharedVariable<Real>("TurblunetViscosity")),
+            rho_(*this->particles_->template getVariableDataByName<Real>("Density")), 
+            p_(*this->particles_->template getVariableDataByName<Real>("Pressure")),
+            mom_(*this->particles_->template getVariableDataByName<Vecd>("Momentum")),
+            mass_(*this->particles_->template getVariableDataByName<Real>("Mass"))
+        {};
 
     void update(size_t index_i, Real dt)
     {
         rho_[index_i] = rho0_f;
-        p_[index_i] = 0.3;
+        p_[index_i] = 0.0;
         Vecd initial_velocity(1.0, 0.0);
         vel_[index_i] = initial_velocity;
         //vel_[index_i][1] = 0.0;
         K_[index_i] = (3.0 / 2.0) * (initial_velocity.squaredNorm()) * (I * I);
         Eps_[index_i] = rho_[index_i] * C_mu_ * ((K_[index_i] * K_[index_i]) / (mu_f)) * (1 / viscosityRatio);
         mu_t_[index_i] = mu_f * viscosityRatio;
+        mom_[index_i][0] = mass_[index_i];
     }
 protected:
   Real C_mu_;
-  StdLargeVec<Vecd> meanvelocity_;
-  StdLargeVec<Real> mu_t_, &Vol_, K_, Eps_, &rho_, &p_;
+  StdLargeVec<Real> &mu_t_, &Vol_, &K_, &Eps_, &rho_, &p_, &mass_;
+  StdLargeVec<Vecd> &mom_;
 };
 //----------------------------------------------------------------------
 //	Define time dependent acceleration in x-direction
 //----------------------------------------------------------------------
-/*
-class TimeDependentAcceleration : public Gravity
+/*class TimeDependentAcceleration : public Gravity
 {
   Real t_ref_, u_ref_ = U_f, du_ave_dt_;
 
@@ -113,8 +113,7 @@ public:
 
         return run_time_ < t_ref_ ? Vecd(du_ave_dt_, 0.0) : global_acceleration_;
   }
-};
-*/
+};*/
 //----------------------------------------------------------------------
 //	Case dependent boundary condition
 //----------------------------------------------------------------------
@@ -124,48 +123,61 @@ public:
 
     TCFBoundaryConditionSetup(BaseInnerRelationInFVM& inner_relation, GhostCreationFromMesh& ghost_creation)
         :BoundaryConditionSetupInFVM(inner_relation, ghost_creation),
-        fluid_(DynamicCast<WeaklyCompressibleFluid>(this, particles_->getBaseMaterial())), Kprof_(*particles_->getVariableByName<Real>("TKEProfile")), 
-        Epsprof_(*particles_->getVariableByName<Real>("DissipationProfile")), 
-        mu_tprof_(*particles_->getVariableByName<Real>("TurblunetViscosityProfile")),
-        Tau_wall_(*particles_->getVariableByName<Real>("WallShearStress"))
-        ,C_mu_(0.09){};
+        fluid_(DynamicCast<WeaklyCompressibleFluid>(this, particles_->getBaseMaterial())), 
+        Kprof_(*this->particles_->template getVariableDataByName<Real>("TKEProfile")),
+        Epsprof_(*this->particles_->template getVariableDataByName<Real>("DissipationProfile")),
+        mu_tprof_(*this->particles_->template getVariableDataByName<Real>("TurblunetViscosityProfile")),
+        //Tau_wall_(*this->particles_->template getVariableDataByName<Real>("WallShearStress")),
+        C_mu_(0.09){};
     virtual ~TCFBoundaryConditionSetup() {};
 
     void applyNonSlipWallBoundary(size_t ghost_index, size_t index_i) override
     {
-        Vecd velocity_at_wall(0.0, 0.0);
         vel_[ghost_index] = -vel_[index_i];
         p_[ghost_index] = p_[index_i];
         rho_[ghost_index] = rho_[index_i];
         Kprof_[ghost_index] = Kprof_[index_i];
         Epsprof_[ghost_index] = Epsprof_[index_i];
         mu_tprof_[ghost_index] = mu_tprof_[index_i];//rho_[ghost_index] * C_mu_ * ((Kprof_[ghost_index] * Kprof_[ghost_index]) / (Epsprof_[ghost_index]))
-        Tau_wall_[ghost_index] = Tau_wall_[index_i];
+        //Tau_wall_[ghost_index] = Tau_wall_[index_i];
     }
     void applyVelocityInletFlow(size_t ghost_index, size_t index_i) override
     {
 
-        Vecd far_field_velocity(1.0, 0.0);
-        vel_[ghost_index] = far_field_velocity;
-        p_[ghost_index] = 0.3;      // p_ [index_i] 0.3;
-        rho_[ghost_index] = fluid_.DensityFromPressure(p_[ghost_index]); // rho_[index_i];fluid_.DensityFromPressure(0.025)
+        Vecd inlet_velocity(1.0, 0.0);
+        vel_[ghost_index] = inlet_velocity;
+        p_[ghost_index] = p_[index_i];     // p_ [index_i] 0.3;
+        rho_[ghost_index] = rho_[index_i]; // rho_[index_i]; // rho_[index_i];fluid_.DensityFromPressure(0.025)
         Kprof_[ghost_index] = (3.0 / 2.0) * (vel_[ghost_index].squaredNorm()) * (I * I);
         Epsprof_[ghost_index] = rho_[index_i] * C_mu_ * ((Kprof_[ghost_index] * Kprof_[ghost_index]) / (mu_f)) * (1 / viscosityRatio);
         mu_tprof_[ghost_index] = mu_f * viscosityRatio;
     }
     void applyPressureOutletBC(size_t ghost_index, size_t index_i) override
     {
-        vel_[ghost_index] = vel_[index_i];
-        p_[ghost_index] = 0.0;
-        rho_[ghost_index] = rho_[index_i];
-        Kprof_[ghost_index] = Kprof_[index_i];
-        Epsprof_[ghost_index] = Epsprof_[index_i];
-        mu_tprof_[ghost_index] = mu_tprof_[index_i];
+        if (vel_[index_i][0] >= 0.0)
+        {
+            vel_[ghost_index] = vel_[index_i];
+            p_[ghost_index] = 0.0; // p_[index_i];
+            rho_[ghost_index] = rho_[index_i];
+            Kprof_[ghost_index] = Kprof_[index_i];
+            Epsprof_[ghost_index] = Epsprof_[index_i];
+            mu_tprof_[ghost_index] = mu_tprof_[index_i];
+        }
+        else
+        {
+            vel_[ghost_index] = vel_[index_i];
+            p_[ghost_index] = 0.0; // p_[index_i];
+            rho_[ghost_index] = rho_[index_i];
+            Kprof_[ghost_index] = (3.0 / 2.0) * (vel_[ghost_index].squaredNorm()) * (I * I);
+            Epsprof_[ghost_index] = rho_[index_i] * C_mu_ * ((Kprof_[ghost_index] * Kprof_[ghost_index]) / (mu_f)) * (1 / viscosityRatio);
+            mu_tprof_[ghost_index] = mu_f * viscosityRatio;
+        }
+        
     }
 protected:
-    StdLargeVec<Real> &Epsprof_, &Kprof_, &mu_tprof_, &Tau_wall_;
+    StdLargeVec<Real> &Epsprof_, &Kprof_, &mu_tprof_;
+    //&Tau_wall_;
     Fluid& fluid_;
     Real C_mu_;
 };
-
 #endif // FVM_TURBULENT_CHANNEL_FLOW_H

@@ -8,11 +8,11 @@ namespace SPH
         //=================================================================================================//
         WCAcousticTimeStepSizeInFVM::WCAcousticTimeStepSizeInFVM(SPHBody& sph_body, Real min_distance_between_nodes, Real acousticCFL)
             : AcousticTimeStepSize(sph_body),
-            rho_(*particles_->getVariableByName<Real>("Density")),
-            p_(*particles_->getVariableByName<Real>("Pressure")),
-            vel_(*particles_->getVariableByName<Vecd>("Velocity")),
-            fluid_(DynamicCast<WeaklyCompressibleFluid>(this, particles_->getBaseMaterial())),
-            min_distance_between_nodes_(min_distance_between_nodes), acousticCFL_(acousticCFL) {};
+          rho_(*this->particles_->template getVariableDataByName<Real>("Density")),
+          p_(*this->particles_->template getVariableDataByName<Real>("Pressure")),
+          vel_(*this->particles_->template getVariableDataByName<Vecd>("Velocity")),
+          fluid_(DynamicCast<WeaklyCompressibleFluid>(this, particles_->getBaseMaterial())),
+          min_distance_between_nodes_(min_distance_between_nodes), acousticCFL_(acousticCFL) {};
         //=================================================================================================//
         Real WCAcousticTimeStepSizeInFVM::outputResult(Real reduced_value)
         {
@@ -22,16 +22,16 @@ namespace SPH
         //=================================================================================================//
         BaseForceFromFluidInFVM::BaseForceFromFluidInFVM(BaseInnerRelation& inner_relation)
             : LocalDynamics(inner_relation.getSPHBody()), DataDelegateInner(inner_relation),
-            Vol_(*particles_->getVariableByName<Real>("VolumetricMeasure")) {};
+              Vol_(*this->particles_->template getVariableDataByName<Real>("VolumetricMeasure")){};
         //=================================================================================================//
         ViscousForceFromFluidInFVM::ViscousForceFromFluidInFVM(BaseInnerRelation& inner_relation, StdVec<StdVec<size_t>> each_boundary_type_contact_real_index)
             : BaseForceFromFluidInFVM(inner_relation),
             fluid_(DynamicCast<WeaklyCompressibleFluid>(this, particles_->getBaseMaterial())),
-            vel_(*particles_->getVariableByName<Vecd>("Velocity")),
+            vel_(*this->particles_->template getVariableDataByName<Vecd>("Velocity")),
             mu_(fluid_.ReferenceViscosity()),
             each_boundary_type_contact_real_index_(each_boundary_type_contact_real_index)
         {
-            particles_->registerVariable(force_from_fluid_, "ViscousForceOnSolid");
+            force_from_fluid_ = particles_->registerSharedVariable<Vecd>("ViscousForceOnSolid");
         };
         //=================================================================================================//
         void ViscousForceFromFluidInFVM::interaction(size_t index_i, Real dt)
@@ -49,7 +49,7 @@ namespace SPH
                     size_t index_j = inner_neighborhood.j_[2];
                     Vecd vel_derivative = (vel_j - vel_i) / (inner_neighborhood.r_ij_[2] + TinyReal);
                     force += 2.0 * mu_ * vel_derivative * Vol_i * inner_neighborhood.dW_ij_[2] * Vol_[index_j];
-                    force_from_fluid_[index_i] = force;
+                    (*force_from_fluid_)[index_i] = force;
                 }
             }
         }

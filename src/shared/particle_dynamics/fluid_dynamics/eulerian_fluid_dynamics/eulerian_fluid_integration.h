@@ -44,7 +44,7 @@ class EulerianIntegration : public BaseIntegration<DataDelegationType>
     virtual ~EulerianIntegration(){};
 
   protected:
-    StdLargeVec<Vecd> &mom_, &dmom_dt_;
+    StdLargeVec<Vecd> &mom_, &dmom_dt_, &mom_advection_, &pressuregrad_;
     StdLargeVec<Real> &dmass_dt_, &Vol_;
 };
 

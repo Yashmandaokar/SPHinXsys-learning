@@ -50,6 +50,32 @@ class WaterBlock : public ComplexShape
         add<MultiPolygonShape>(water_block, "WaterBlock");
     }
 };
+
+    class TCFInitialCondition
+    : public fluid_dynamics::FluidInitialCondition
+{
+  public:
+    explicit TCFInitialCondition(SPHBody &sph_body)
+        : FluidInitialCondition(sph_body),
+          rho_(*this->particles_->template getVariableDataByName<Real>("Density")),
+          p_(*this->particles_->template getVariableDataByName<Real>("Pressure")),
+          mom_(*this->particles_->template getVariableDataByName<Vecd>("Momentum")),
+          mass_(*this->particles_->template getVariableDataByName<Real>("Mass"))
+          {};
+
+    void update(size_t index_i, Real dt)
+    {
+        rho_[index_i] = rho0_f;
+        //p_[index_i] = 0.0;
+        Vecd initial_velocity(1.0, 0.0);
+        vel_[index_i] = initial_velocity;
+        mom_[index_i][0] = mass_[index_i];
+    }
+
+  protected:
+    StdLargeVec<Real> &rho_, &p_, &mass_;
+    StdLargeVec<Vecd> &mom_;
+};
 //----------------------------------------------------------------------
 //	Case dependent boundary condition
 //----------------------------------------------------------------------
@@ -125,9 +151,13 @@ int main(int ac, char *av[])
     //----------------------------------------------------------------------
     //	Define the methods for I/O operations and observations of the simulation.
     //----------------------------------------------------------------------
-    water_block.addBodyStateForRecording<Vecd>("Velocity");
     BodyStatesRecordingInMeshToVtp write_real_body_states(water_block, ansys_mesh);
     write_real_body_states.addToWrite<Real>(water_block, "Density");
+    write_real_body_states.addToWrite<Real>(water_block, "Pressure");
+    write_real_body_states.addToWrite<Vecd>(water_block, "Velocity");
+    write_real_body_states.addToWrite<Real>(water_block, "MassChangeRate");
+    write_real_body_states.addToWrite<Vecd>(water_block, "MomentumChangeRate");
+    
     RegressionTestDynamicTimeWarping<ReducedQuantityRecording<QuantitySummation<Vecd>>> write_total_viscous_force_on_inserted_body(water_block, "ViscousForceOnSolid");
     ReducedQuantityRecording<QuantitySummation<Vecd>> write_total_pressure_force_on_inserted_body(water_block, "PressureForceOnSolid");
     ReducedQuantityRecording<MaximumSpeed> write_maximum_speed(water_block);
@@ -135,14 +165,19 @@ int main(int ac, char *av[])
     //	Prepare the simulation with cell linked list, configuration
     //	and case specified initial condition if necessary.
     //----------------------------------------------------------------------
+
+     SimpleDynamics<TCFInitialCondition> initial_condition(water_block);
     water_block_inner.updateConfiguration();
+
+    initial_condition.exec();
+
     //----------------------------------------------------------------------
     //	Setup for time-stepping control
     //----------------------------------------------------------------------
     size_t number_of_iterations = 0;
     int screen_output_interval = 1000;
     Real end_time = 70.0;
-    Real output_interval = 5.0; /**< time stamps for output. */
+    Real output_interval = 0.5; /**< time stamps for output. */
     //----------------------------------------------------------------------
     //	Statistics for CPU time
     //----------------------------------------------------------------------
@@ -181,6 +216,7 @@ int main(int ac, char *av[])
                 write_maximum_speed.writeToFile(number_of_iterations);
             }
             number_of_iterations++;
+            //write_real_body_states.writeToFile();
         }
         TickCount t2 = TickCount::now();
         write_real_body_states.writeToFile();

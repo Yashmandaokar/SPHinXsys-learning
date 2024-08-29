@@ -47,6 +47,7 @@ int main(int ac, char *av[])
     //----------------------------------------------------------------------
     BodyStatesRecordingInMeshToVtu write_real_body_states(air_block, read_mesh_data);
     write_real_body_states.addToWrite<Real>(air_block, "Density");
+    write_real_body_states.addToWrite<Vecd>(air_block, "Velocity");
     write_real_body_states.addToWrite<Real>(air_block, "Pressure");
     ReducedQuantityRecording<MaximumSpeed> write_maximum_speed(air_block);
 
@@ -58,7 +59,7 @@ int main(int ac, char *av[])
     size_t number_of_iterations = 0;
     int screen_output_interval = 1000;
     Real end_time = 30;
-    Real output_interval = 2; /**< time stamps for output. */
+    Real output_interval = 2.0; /**< time stamps for output. */
     //----------------------------------------------------------------------
     //	Statistics for CPU time
     //----------------------------------------------------------------------
@@ -93,7 +94,6 @@ int main(int ac, char *av[])
                 write_maximum_speed.writeToFile(number_of_iterations);
             }
             number_of_iterations++;
-            // write_real_body_states.writeToFile();
         }
         TickCount t2 = TickCount::now();
         write_real_body_states.writeToFile();

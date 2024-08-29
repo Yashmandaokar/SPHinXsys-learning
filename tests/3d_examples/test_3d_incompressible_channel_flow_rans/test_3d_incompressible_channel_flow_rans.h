@@ -84,18 +84,12 @@ class InvCFBoundaryConditionSetup : public BoundaryConditionSetupInFVM
           fluid_(DynamicCast<WeaklyCompressibleFluid>(this, particles_->getBaseMaterial())){};
     virtual ~InvCFBoundaryConditionSetup(){};
 
-    void applyNonSlipWallBoundary(size_t ghost_index, size_t index_i) override
-    {
-        vel_[ghost_index] = -vel_[index_i];
-        p_[ghost_index] = p_[index_i];
-        rho_[ghost_index] = rho_[index_i];
-    }
-    /*void applyReflectiveWallBoundary(size_t ghost_index, size_t index_i, Vecd e_ij) override
+    void applyReflectiveWallBoundary(size_t ghost_index, size_t index_i, Vecd e_ij) override
     {
         vel_[ghost_index] = (vel_[index_i] - e_ij.dot(vel_[index_i]) * (e_ij)) + (-e_ij.dot(vel_[index_i]) * (e_ij));
         p_[ghost_index] = p_[index_i];
         rho_[ghost_index] = rho_[index_i];
-    }*/
+    }
     void applyVelocityInletFlow(size_t ghost_index, size_t index_i) override
     {
         Vecd far_field_velocity(1.0, 0.0, 0.0);

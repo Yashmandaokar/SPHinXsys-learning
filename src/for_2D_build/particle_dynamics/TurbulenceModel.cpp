@@ -18,83 +18,83 @@ namespace SPH
             Eps_(*particles_->getVariableByName<Real>("Dissipation")),
             mu_t_(*particles_->getVariableByName<Real>("TurbulentViscosity")) {}*/
         //=================================================================================================//
-    Kepsprofiles::Kepsprofiles(BaseInnerRelation &inner_relation, const std::string &meshdatafull_path)
+        Kepsprofiles::Kepsprofiles(BaseInnerRelation &inner_relation, const std::string &meshdatafull_path)
         : BaseIntegration<DataDelegateInner>(inner_relation),
           Kprof_(*this->particles_->template registerSharedVariable<Real>("TKEProfile")),
           Epsprof_(*this->particles_->template registerSharedVariable<Real>("DissipationProfile")),
-          mu_tprof_(*this->particles_->template registerSharedVariable<Real>("TurblunetViscosityProfile"))
-          ,vel_prof_(*this->particles_->template registerSharedVariable<Vecd>("VelocityProfile"))
-    {
-        x_coords_.resize(55322);
-        y_coords_.resize(55322);
-        p.resize(55322);
-        tke_profile_.resize(55322);
-        dissipation_profile_.resize(55322);
-        mu_t_profile_.resize(55322);
-        x_velocity_profile_.resize(55322);
-        y_velocity_profile_.resize(55322);
-        meshdata(meshdatafull_path);
+          mu_tprof_(*this->particles_->template registerSharedVariable<Real>("TurblunetViscosityProfile")),
+          vel_prof_(*this->particles_->template registerSharedVariable<Vecd>("VelocityProfile"))
+          {
+            x_coords_.resize(55322);
+            y_coords_.resize(55322);
+            p.resize(55322);
+            tke_profile_.resize(55322);
+            dissipation_profile_.resize(55322);
+            mu_t_profile_.resize(55322);
+            x_velocity_profile_.resize(55322);
+            y_velocity_profile_.resize(55322);
+            meshdata(meshdatafull_path);
         
-        /*// Initialize y-coordinates
-        y_coords_ = 
-        {0.0, 0.000906638, 0.0436064, 0.125532, 0.168244, 0.173645, 0.216377, 0.292655, 0.335425,
-             0.348909, 0.391733, 0.459711, 0.502612, 0.525215, 0.568193, 0.626927, 0.670031, 0.702929,
-             0.746176, 0.794683, 0.838112, 0.882519, 0.926142, 0.963439, 1.00726, 1.06419, 1.10824,
-             1.13361, 1.17783, 1.2472, 1.29161, 1.30568, 1.35006, 1.42921, 1.47351, 1.47909, 1.52317,
-             1.60814, 1.65201, 1.65263, 1.69631, 1.78265, 1.82615, 1.82724, 1.87062, 1.95672, 2.0
-        };
+            /*// Initialize y-coordinates
+            y_coords_ = 
+            {0.0, 0.000906638, 0.0436064, 0.125532, 0.168244, 0.173645, 0.216377, 0.292655, 0.335425,
+                 0.348909, 0.391733, 0.459711, 0.502612, 0.525215, 0.568193, 0.626927, 0.670031, 0.702929,
+                 0.746176, 0.794683, 0.838112, 0.882519, 0.926142, 0.963439, 1.00726, 1.06419, 1.10824,
+                 1.13361, 1.17783, 1.2472, 1.29161, 1.30568, 1.35006, 1.42921, 1.47351, 1.47909, 1.52317,
+                 1.60814, 1.65201, 1.65263, 1.69631, 1.78265, 1.82615, 1.82724, 1.87062, 1.95672, 2.0
+            };
 
-        // Initialize TKE values
-        tke_profile_ = 
-        {0.00772659, 0.00772659, 0.00762386, 0.00742495, 0.00718538, 0.00658423, 0.00631289,
-             0.00583732, 0.00560646, 0.00517726, 0.00497198, 0.00457626, 0.00438325, 0.00402024,
-             0.00384986, 0.00352216, 0.00336787, 0.00308917, 0.00296905, 0.00275522, 0.00266621,
-             0.0025303, 0.00248508, 0.0024324, 0.0024268, 0.00245958, 0.00249356, 0.0026133, 0.00269515,
-             0.00289806, 0.00301497, 0.00329008, 0.00344532, 0.00377623, 0.00395351, 0.00432623,
-             0.00452243, 0.00492713, 0.00514189, 0.00558025, 0.00581205, 0.00629682, 0.00657169,
-             0.00717885, 0.00742023, 0.00762454, 0.00762454
-        };
+            // Initialize TKE values
+            tke_profile_ = 
+            {0.00772659, 0.00772659, 0.00762386, 0.00742495, 0.00718538, 0.00658423, 0.00631289,
+                 0.00583732, 0.00560646, 0.00517726, 0.00497198, 0.00457626, 0.00438325, 0.00402024,
+                 0.00384986, 0.00352216, 0.00336787, 0.00308917, 0.00296905, 0.00275522, 0.00266621,
+                 0.0025303, 0.00248508, 0.0024324, 0.0024268, 0.00245958, 0.00249356, 0.0026133, 0.00269515,
+                 0.00289806, 0.00301497, 0.00329008, 0.00344532, 0.00377623, 0.00395351, 0.00432623,
+                 0.00452243, 0.00492713, 0.00514189, 0.00558025, 0.00581205, 0.00629682, 0.00657169,
+                 0.00717885, 0.00742023, 0.00762454, 0.00762454
+            };
 
-        dissipation_profile_ = 
-        {0.0093729, 0.0093729, 0.00481526, 0.00260519, 0.00202288, 0.00136273, 0.0011503, 0.000862241,
-             0.000754245, 0.000592406, 0.000528937, 0.000425474, 0.000382187, 0.000311214, 0.000281628,
-             0.000230258, 0.000208244, 0.00017164, 0.000156999, 0.000132392, 0.000122708, 0.000108455,
-             0.000103895, 9.8652e-05, 9.81041e-05, 0.000101376, 0.000104773, 0.000117184, 0.000125926,
-             0.000148761, 0.000162674, 0.000197766, 0.000219196, 0.000269387, 0.000299301, 0.00037014,
-             0.000412735, 0.000515417, 0.000580174, 0.000741197, 0.00084657, 0.00113255, 0.0013427,
-             0.00199522, 0.00257039, 0.00475288, 0.00913
-        };
+            dissipation_profile_ = 
+            {0.0093729, 0.0093729, 0.00481526, 0.00260519, 0.00202288, 0.00136273, 0.0011503, 0.000862241,
+                 0.000754245, 0.000592406, 0.000528937, 0.000425474, 0.000382187, 0.000311214, 0.000281628,
+                 0.000230258, 0.000208244, 0.00017164, 0.000156999, 0.000132392, 0.000122708, 0.000108455,
+                 0.000103895, 9.8652e-05, 9.81041e-05, 0.000101376, 0.000104773, 0.000117184, 0.000125926,
+                 0.000148761, 0.000162674, 0.000197766, 0.000219196, 0.000269387, 0.000299301, 0.00037014,
+                 0.000412735, 0.000515417, 0.000580174, 0.000741197, 0.00084657, 0.00113255, 0.0013427,
+                 0.00199522, 0.00257039, 0.00475288, 0.00913
+            };
       
-        // Initialize mut values
-        mu_t_profile_ = 
-        {0.00057325, 0.00057325, 0.00108636, 0.00190454, 0.00229705, 0.00286315, 0.00311809,
-             0.00355665, 0.00375066, 0.00407214, 0.00420628, 0.00442988, 0.00452437, 0.00467399,
-             0.00473649, 0.00484894, 0.00490208, 0.0050039, 0.00505338, 0.0051605, 0.00521384, 0.00531298,
-             0.00534972, 0.00539765, 0.00540283, 0.0053707, 0.00534112, 0.00524508, 0.00519152, 0.00508124,
-             0.0050291, 0.00492611, 0.00487382, 0.00476412, 0.00470002, 0.00455088, 0.00445979, 0.00423908,
-             0.00410138, 0.00378107, 0.00359119, 0.00315085, 0.00289479, 0.00232466, 0.00192787,
-             0.00110081, 0.00110081
-        };
+            // Initialize mut values
+            mu_t_profile_ = 
+            {0.00057325, 0.00057325, 0.00108636, 0.00190454, 0.00229705, 0.00286315, 0.00311809,
+                 0.00355665, 0.00375066, 0.00407214, 0.00420628, 0.00442988, 0.00452437, 0.00467399,
+                 0.00473649, 0.00484894, 0.00490208, 0.0050039, 0.00505338, 0.0051605, 0.00521384, 0.00531298,
+                 0.00534972, 0.00539765, 0.00540283, 0.0053707, 0.00534112, 0.00524508, 0.00519152, 0.00508124,
+                 0.0050291, 0.00492611, 0.00487382, 0.00476412, 0.00470002, 0.00455088, 0.00445979, 0.00423908,
+                 0.00410138, 0.00378107, 0.00359119, 0.00315085, 0.00289479, 0.00232466, 0.00192787,
+                 0.00110081, 0.00110081
+            };
 
         
-         x_velocity_profile_ = 
-        {0.670546, 0.670546, 0.750487, 0.837911, 0.870062, 0.914095, 0.932492, 0.962998, 0.976525,
-             0.999701, 1.00995, 1.02832, 1.03676, 1.05158, 1.05814, 1.07, 1.07538, 1.0845, 1.08832,
-             1.09482, 1.09752, 1.10145, 1.10275, 1.10423, 1.10442, 1.10351, 1.10255, 1.09913, 1.09675,
-             1.09065, 1.08702, 1.07812, 1.07291, 1.06112, 1.05448, 1.03955, 1.03125, 1.01272, 1.00218,
-             0.97879, 0.965476, 0.934753, 0.916344, 0.872097, 0.839975, 0.752345, 0.670546
-        };
+             x_velocity_profile_ = 
+            {0.670546, 0.670546, 0.750487, 0.837911, 0.870062, 0.914095, 0.932492, 0.962998, 0.976525,
+                 0.999701, 1.00995, 1.02832, 1.03676, 1.05158, 1.05814, 1.07, 1.07538, 1.0845, 1.08832,
+                 1.09482, 1.09752, 1.10145, 1.10275, 1.10423, 1.10442, 1.10351, 1.10255, 1.09913, 1.09675,
+                 1.09065, 1.08702, 1.07812, 1.07291, 1.06112, 1.05448, 1.03955, 1.03125, 1.01272, 1.00218,
+                 0.97879, 0.965476, 0.934753, 0.916344, 0.872097, 0.839975, 0.752345, 0.670546
+            };
 
-        y_velocity_profile_ = 
-          {-0.000387598, -0.000387598, -0.00024092, 1.11873e-05, -3.13593e-05, 5.297e-06, 1.32937e-06,
-         8.57787e-06, 5.22437e-06, 7.11216e-06, 6.93925e-06, 7.93779e-06, 6.33145e-06, 5.53202e-06,
-         5.79597e-06, 6.11935e-06, 6.55074e-06, 9.80409e-06, 1.32577e-05, 1.85234e-05, 2.15542e-05,
-         2.80438e-05, 3.10059e-05, 4.78082e-05, 5.0417e-05, 4.7223e-05, 5.35328e-05, 5.87922e-05,
-         5.88573e-05, 6.07748e-05, 5.94737e-05, 5.92258e-05, 5.46051e-05, 5.01192e-05, 4.5167e-05,
-         3.78497e-05, 3.11685e-05, 2.20534e-05, 1.56744e-05, 6.91562e-06, -1.32503e-07, -7.75231e-06,
-         -1.34218e-05, -1.60569e-05, -3.71078e-05, 5.67885e-05, 5.67885e-05
-        };*/
-    } 
+            y_velocity_profile_ = 
+              {-0.000387598, -0.000387598, -0.00024092, 1.11873e-05, -3.13593e-05, 5.297e-06, 1.32937e-06,
+             8.57787e-06, 5.22437e-06, 7.11216e-06, 6.93925e-06, 7.93779e-06, 6.33145e-06, 5.53202e-06,
+             5.79597e-06, 6.11935e-06, 6.55074e-06, 9.80409e-06, 1.32577e-05, 1.85234e-05, 2.15542e-05,
+             2.80438e-05, 3.10059e-05, 4.78082e-05, 5.0417e-05, 4.7223e-05, 5.35328e-05, 5.87922e-05,
+             5.88573e-05, 6.07748e-05, 5.94737e-05, 5.92258e-05, 5.46051e-05, 5.01192e-05, 4.5167e-05,
+             3.78497e-05, 3.11685e-05, 2.20534e-05, 1.56744e-05, 6.91562e-06, -1.32503e-07, -7.75231e-06,
+             -1.34218e-05, -1.60569e-05, -3.71078e-05, 5.67885e-05, 5.67885e-05
+            };*/
+          } 
     //=================================================================================================//
     
     void Kepsprofiles::meshdata(const std::string &full_path)
@@ -198,9 +198,9 @@ namespace SPH
                         Vecd cellcentre = pos_[index_i];
                         Real u = 1;
                     }
-                    //p_[index_i] = p[i];
-                    //vel_[index_i][0] = x_velocity_profile_[i];
-                    //vel_[index_i][1] = y_velocity_profile_[i];
+                    p_[index_i] = p[i];
+                    vel_[index_i][0] = x_velocity_profile_[i];
+                    vel_[index_i][1] = y_velocity_profile_[i];
                     Kprof_[index_i] = tke_profile_[i];
                     Epsprof_[index_i] = dissipation_profile_[i];
                     mu_tprof_[index_i] = mu_t_profile_[i];
@@ -272,18 +272,18 @@ namespace SPH
             K_adv_(*this->particles_->template registerSharedVariable<Real>("TKEAdvection")),
             K_lap_(*this->particles_->template registerSharedVariable<Real>("TKELaplacian")),
             Eps_adv_(*this->particles_->template registerSharedVariable<Real>("DissipationAdvection")),
+            Tau_wall_(*this->particles_->template registerSharedVariable<Real>("WallShearStress")),
             Eps_lap_(*this->particles_->template registerSharedVariable<Real>("DissipationLaplacian")),
             Eps_prodscalar_(*this->particles_->template registerSharedVariable<Real>("DissipationProdscalar")),
             Eps_scalar_(*this->particles_->template registerSharedVariable<Real>("DissipationScalar")),
-            Tau_wall_(*this->particles_->template registerSharedVariable<Real>("WallShearStress")),
-            Cmu_(0.09), sigmak_(1.0), sigmaeps_(1.3), C1eps_(1.44), C2eps_(1.92), 
-            Kprof_(*particles_->getVariableByName<Real>("TKEProfile")),
-            Epsprof_(*particles_->getVariableByName<Real>("DissipationProfile")),
-            mu_tprof_(*particles_->getVariableByName<Real>("TurblunetViscosityProfile")),
-            K_(*particles_->getVariableByName<Real>("TKE")),
-            Eps_(*particles_->getVariableByName<Real>("Dissipation")),
-            mu_t_(*particles_->getVariableByName<Real>("TurblunetViscosity"))
-            {} 
+            Cmu_(0.09), sigmak_(1.0), sigmaeps_(1.3), C1eps_(1.44), C2eps_(1.92),
+            Kprof_(*this->particles_->template getVariableDataByName<Real>("TKEProfile")),
+            Epsprof_(*this->particles_->template getVariableDataByName<Real>("DissipationProfile")),
+            mu_tprof_(*this->particles_->template getVariableDataByName<Real>("TurblunetViscosityProfile")),
+            K_(*this->particles_->template getVariableDataByName<Real>("TKE")),
+            Eps_(*this->particles_->template getVariableDataByName<Real>("Dissipation")),
+            mu_t_(*this->particles_->template getVariableDataByName<Real>("TurblunetViscosity"))
+            {}
         //=================================================================================================//
             /*
             WallAdjacentCells::WallAdjacentCells(BaseInnerRelation &inner_relation, GhostCreationFromMesh &ghost_creator)
@@ -334,9 +334,9 @@ namespace SPH
         //=================================================================================================//
          void WallAdjacentCells::walladjacentcellyp()
         {
-        walladjacentindex_.resize(particles_->particles_bound_);
-        wallghostindex_.resize(particles_->particles_bound_);
-        walleij_.resize(particles_->particles_bound_);
+        walladjacentindex_.resize(particles_->ParticlesBound());
+                wallghostindex_.resize(particles_->ParticlesBound());
+        walleij_.resize(particles_->ParticlesBound());
         Real boundary_type = 3;
 
         if (!ghost_creator_.each_boundary_type_with_all_ghosts_index_[boundary_type].empty())
@@ -390,13 +390,13 @@ namespace SPH
         KEpsilonStd1stHalf::KEpsilonStd1stHalf(BaseInnerRelation &inner_relation, GhostCreationFromMesh& ghost_creator) 
             : StdWallFunctionFVM(inner_relation, ghost_creator),
             dK_dt_(*this->particles_->template registerSharedVariable<Real>("TKEChangeRate")),
-            walladjacentcellflag_(*particles_->getVariableByName<Real>("FlagForWallAdjacentCells")),
+            walladjacentcellflag_(*this->particles_->template getVariableDataByName<Real>("FlagForWallAdjacentCells")),
             strain_rate_(*this->particles_->template registerSharedVariable<Real>("StrainRate")),
             dudx_(*this->particles_->template registerSharedVariable<Real>("dudx")),
             dudy_(*this->particles_->template registerSharedVariable<Real>("dudy")),
             dvdx_(*this->particles_->template registerSharedVariable<Real>("dvdx")),
             dvdy_(*this->particles_->template registerSharedVariable<Real>("dvdy")),
-            vel_gradient_mat_(*particles_->getVariableByName<Matd>("VelocityGradient"))
+            vel_gradient_mat_(*this->particles_->template getVariableDataByName<Matd>("VelocityGradient"))
         {}
         //=================================================================================================//
         void KEpsilonStd1stHalf::interaction(size_t index_i, Real dt)
@@ -410,7 +410,7 @@ namespace SPH
             K_prod_[index_i] = 0.0, K_adv_[index_i] = 0.0, K_lap_[index_i] = 0.0, strain_rate_[index_i] = 0.0;
             Eps_sum_[index_i] = 0.0, dudx_[index_i] = 0.0, dudy_[index_i] = 0.0, dvdx_[index_i] = 0.0, dvdy_[index_i] = 0.0;
             vel_gradient_mat_[index_i] = Matd::Zero();
-            mu_tprof_[index_i] = rho_[index_i] * Cmu_ * ((Kprof_[index_i] * Kprof_[index_i]) / (Epsprof_[index_i]));
+            //mu_tprof_[index_i] = rho_[index_i] * Cmu_ * ((Kprof_[index_i] * Kprof_[index_i]) / (Epsprof_[index_i]));
 
             if (walladjacentcellflag_[index_i] == 1.0)
             {
@@ -516,7 +516,7 @@ namespace SPH
         KEpsilonStd2ndHalf::KEpsilonStd2ndHalf(BaseInnerRelation &inner_relation, GhostCreationFromMesh& ghost_creator) 
             : BaseTurbulence(inner_relation, ghost_creator),
             dEps_dt_(*this->particles_->template registerSharedVariable<Real>("DissipationChangeRate")),
-            walladjacentcellflag_(*particles_->getVariableByName<Real>("FlagForWallAdjacentCells"))
+            walladjacentcellflag_(*this->particles_->template getVariableDataByName<Real>("FlagForWallAdjacentCells"))
         {}
         //=================================================================================================//
         
@@ -527,7 +527,7 @@ namespace SPH
             Neighborhood &inner_neighborhood = inner_configuration_[index_i];
             if (walladjacentcellflag_[index_i] != 1)
             {
-                mu_tprof_[index_i] = rho_[index_i] * Cmu_ * ((Kprof_[index_i] * Kprof_[index_i]) / (Epsprof_[index_i]));
+                //mu_tprof_[index_i] = rho_[index_i] * Cmu_ * ((Kprof_[index_i] * Kprof_[index_i]) / (Epsprof_[index_i]));
                 for (size_t n = 0; n != inner_neighborhood.current_size_; ++n)
                 {
                     size_t index_j = inner_neighborhood.j_[n];

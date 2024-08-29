@@ -1,20 +1,87 @@
-#ifndef RANS_FLUID_INTEGRATION_HPP
-#define RANS_FLUID_INTEGRATION_HPP
-#include "rans_fluid_integration.h"
+#ifndef RANS_DYNAMICS_HPP
+#define RANS_DYNAMICS_HPP
+#include "rans_dynamics.h"
 
 namespace SPH
 {
     namespace fluid_dynamics
     {
+    //=================================================================================================//
+    template <class DataDelegationType>
+    template <class BaseRelationType>
+    TurbulentViscousForceInFVM<DataDelegationType>::TurbulentViscousForceInFVM(BaseRelationType &base_relation)
+        : LocalDynamics(base_relation.getSPHBody()), DataDelegationType(base_relation),
+          rho_(*this->particles_->template getVariableDataByName<Real>("Density")),
+          mass_(*this->particles_->template getVariableDataByName<Real>("Mass")),
+          Vol_(*this->particles_->template getVariableDataByName<Real>("VolumetricMeasure")),
+          vel_(*this->particles_->template getVariableDataByName<Vecd>("Velocity")),
+          mu_tprof_(*this->particles_->template getVariableDataByName<Real>("TurblunetViscosityProfile")),
+          turbulent_viscous_force_(*this->particles_->template registerSharedVariable<Vecd>("TurbulentViscousForce")),
+          smoothing_length_(this->sph_body_.sph_adaptation_->ReferenceSmoothingLength()) {}
+    //=================================================================================================//
+    TurbulentViscousForceInFVM<Inner<>>::TurbulentViscousForceInFVM(BaseInnerRelation &inner_relation)
+        : TurbulentViscousForceInFVM<DataDelegateInner>(inner_relation),
+          ForcePrior(particles_, "TurbulentViscousForce")
+    {}
+    //=================================================================================================//
+    void TurbulentViscousForceInFVM<Inner<>>::interaction(size_t index_i, Real dt)
+    {
+        Vecd force = Vecd::Zero();
+        const Neighborhood &inner_neighborhood = inner_configuration_[index_i];
+        for (size_t n = 0; n != inner_neighborhood.current_size_; ++n)
+        {
+            size_t index_j = inner_neighborhood.j_[n];
+            const Vecd &e_ij = inner_neighborhood.e_ij_[n];
+            Real mu_t_avg = (2.0 * mu_tprof_[index_i] * mu_tprof_[index_j]) / (mu_tprof_[index_i] + mu_tprof_[index_j] + TinyReal);
 
-        template <class DataDelegationType>
+            // turbulent viscous force
+            Vecd vel_derivative = (vel_[index_i] - vel_[index_j]) /
+                                  (inner_neighborhood.r_ij_[n] + 0.01 * smoothing_length_);
+            force += 2.0 * mu_t_avg * vel_derivative * inner_neighborhood.dW_ij_[n] * Vol_[index_j];
+        }
+        turbulent_viscous_force_[index_i] = force * Vol_[index_i];
+    }
+    //=================================================================================================//
+    template <class DataDelegationType>
+    template <class BaseRelationType>
+    TkeGradientForceInFVM<DataDelegationType>::TkeGradientForceInFVM(BaseRelationType &base_relation)
+        : LocalDynamics(base_relation.getSPHBody()), DataDelegationType(base_relation),
+          rho_(*this->particles_->template getVariableDataByName<Real>("Density")),
+          mass_(*this->particles_->template getVariableDataByName<Real>("Mass")),
+          Vol_(*this->particles_->template getVariableDataByName<Real>("VolumetricMeasure")),
+          Kprof_(*this->particles_->template getVariableDataByName<Real>("TKEProfile")),
+          tke_gradient_force_(*this->particles_->template registerSharedVariable<Vecd>("TkeGradientForce"))
+          {}
+    //=================================================================================================//
+          TkeGradientForceInFVM<Inner<>>::TkeGradientForceInFVM(BaseInnerRelation &inner_relation)
+              : TkeGradientForceInFVM<DataDelegateInner>(inner_relation),
+          ForcePrior(particles_, "TkeGradientForce")
+    {}
+    //=================================================================================================//
+    void TkeGradientForceInFVM<Inner<>>::interaction(size_t index_i, Real dt)
+    {
+        Vecd force = Vecd::Zero();
+        const Neighborhood &inner_neighborhood = inner_configuration_[index_i];
+        for (size_t n = 0; n != inner_neighborhood.current_size_; ++n)
+        {
+            size_t index_j = inner_neighborhood.j_[n];
+            const Vecd &e_ij = inner_neighborhood.e_ij_[n];
+
+            // tke gradient force
+            force += (inner_neighborhood.dW_ij_[n] * Vol_[index_j] * rho_[index_i] * (2.0 / 3.0) * (Kprof_[index_i] - Kprof_[index_j]) * Matd::Identity()) * e_ij;
+        }
+
+        tke_gradient_force_[index_i] = force * Vol_[index_i];
+    }
+    //=================================================================================================//
+        /* template <class DataDelegationType>
         template <class BaseRelationType>
         EulerianIntegrationRANS<DataDelegationType>::EulerianIntegrationRANS(BaseRelationType& base_relation)
             : BaseIntegration<DataDelegationType>(base_relation),
             mom_(*this->particles_->template registerSharedVariable<Vecd>("Momentum")),
             dmom_dt_(*this->particles_->template registerSharedVariable<Vecd>("MomentumChangeRate")),
             dmass_dt_(*this->particles_->template registerSharedVariable<Real>("MassChangeRate")),
-            Vol_(*this->particles_->template getVariableByName<Real>("VolumetricMeasure")), Cmu_(0.09) {}
+            Vol_(*this->particles_->template getVariableDataByName<Real>("VolumetricMeasure")), Cmu_(0.09) {}
         //=================================================================================================//
         //=================================================================================================//
         template <class RiemannSolverType>
@@ -22,17 +89,17 @@ namespace SPH
             EulerianIntegration1stHalfRANS(BaseInnerRelation& inner_relation, Real limiter_parameter)
             : EulerianIntegrationRANS<DataDelegateInner>(inner_relation),
             riemann_solver_(this->fluid_, this->fluid_, limiter_parameter), 
-            Kprof_(*particles_->getVariableByName<Real>("TKEProfile")),
-            Epsprof_(*particles_->getVariableByName<Real>("DissipationProfile")),
-            mu_tprof_(*particles_->getVariableByName<Real>("TurblunetViscosityProfile"))
+            Kprof_(*this->particles_->template getVariableDataByName<Real>("TKEProfile")),
+            Epsprof_(*this->particles_->template getVariableDataByName<Real>("DissipationProfile")),
+            mu_tprof_(*this->particles_->template getVariableDataByName<Real>("TurblunetViscosityProfile"))
             , meanvel_advection_(*this->particles_->template registerSharedVariable<Vecd>("MomentumAdvection")),
             viscous_dissipation_(*this->particles_->template registerSharedVariable<Vecd>("MomentumViscousDissipation")),
             pressuregrad_(*this->particles_->template registerSharedVariable<Vecd>("MomentumPressureGradient")),
             tkegrad_(*this->particles_->template registerSharedVariable<Vecd>("MomentumTKEGradient")),
-            vel_gradient_mat_(*particles_->getVariableByName<Matd>("VelocityGradient")),
-            walladjacentcellflag_(*particles_->getVariableByName<Real>("FlagForWallAdjacentCells")),
-            Tau_wall_(*particles_->getVariableByName<Real>("WallShearStress")),
-            wallfacearea_(*particles_->getVariableByName<Real>("WallFaceArea")),
+            vel_gradient_mat_(*this->particles_->template getVariableDataByName<Matd>("VelocityGradient")),
+            walladjacentcellflag_(*this->particles_->template getVariableDataByName<Real>("FlagForWallAdjacentCells")),
+            Tau_wall_(*this->particles_->template getVariableDataByName<Real>("WallShearStress")),
+            wallfacearea_(*this->particles_->template getVariableDataByName<Real>("WallFaceArea")),
             shear_force_(*this->particles_->template registerSharedVariable<Vecd>("ShearForce"))
             {}
         //=================================================================================================//
@@ -112,9 +179,9 @@ namespace SPH
         EulerianIntegration1stHalfRANS<Contact<Wall>, RiemannSolverType>::
             EulerianIntegration1stHalfRANS(BaseContactRelation& wall_contact_relation, Real limiter_parameter)
             : BaseEulerianIntegrationWithWallRANS(wall_contact_relation), riemann_solver_(fluid_, fluid_, limiter_parameter),
-            K_(*particles_->getVariableByName<Real>("TKE")),
-            Eps_(*particles_->getVariableByName<Real>("Dissipation")),
-            mu_t_(*particles_->getVariableByName<Real>("TurbulentViscosity")) {}
+              K_(*this->particles_->template getVariableDataByName<Real>("TKE")),
+              Eps_(*this->particles_->template getVariableDataByName<Real>("Dissipation")),
+              mu_t_(*this->particles_->template getVariableDataByName<Real>("TurblunetViscosity")) {}
         //=================================================================================================//
         template <class RiemannSolverType>
         void EulerianIntegration1stHalfRANS<Contact<Wall>, RiemannSolverType>::interaction(size_t index_i, Real dt)
@@ -150,10 +217,10 @@ namespace SPH
                 }
             }
             dmom_dt_[index_i] += momentum_change_rate;
-        }
+        }*/
         //=================================================================================================//
     }// namespace SPH
 
 }// namespace SPH
 
-#endif // RANS_FLUID_INTEGRATION_HPP
+#endif // RANS_DYNAMICS_HPP

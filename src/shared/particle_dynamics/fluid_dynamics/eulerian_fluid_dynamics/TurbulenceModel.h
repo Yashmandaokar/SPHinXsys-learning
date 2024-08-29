@@ -4,7 +4,7 @@
 #include "unstructured_mesh.h"
 #include "all_particle_dynamics.h"
 #include "riemann_solver.h"
-#include "rans_fluid_integration.h"
+#include "rans_dynamics.h"
 #include "fvm_ghost_boundary.h"
 namespace SPH
 {
@@ -37,10 +37,10 @@ namespace SPH
             StdLargeVec<Vecd> &mom_, &dmom_dt_;
             StdLargeVec<Real>& dmass_dt_;
             StdLargeVec<Real> &K_prod_p_, &K_prod_, &Eps_p_, &Eps_sum_, &K_adv_, &K_lap_;
-            StdLargeVec<Real> &Eps_adv_, &Eps_lap_, &Eps_prodscalar_, &Eps_scalar_, &Tau_wall_;
+            StdLargeVec<Real> &Eps_adv_, &Eps_lap_, &Eps_prodscalar_, &Eps_scalar_;
             Real Cmu_, sigmak_;
             Real sigmaeps_, C1eps_, C2eps_;
-            StdLargeVec<Real> &Kprof_, &Epsprof_, &mu_tprof_;
+            StdLargeVec<Real> &Kprof_, &Epsprof_, &mu_tprof_, &Tau_wall_;
             StdLargeVec<Real> &K_, &Eps_, &mu_t_;
             GhostCreationFromMesh& ghost_creator_;
         };
