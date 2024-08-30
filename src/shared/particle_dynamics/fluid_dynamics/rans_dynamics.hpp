@@ -15,7 +15,7 @@ namespace SPH
           mass_(*this->particles_->template getVariableDataByName<Real>("Mass")),
           Vol_(*this->particles_->template getVariableDataByName<Real>("VolumetricMeasure")),
           vel_(*this->particles_->template getVariableDataByName<Vecd>("Velocity")),
-          mu_tprof_(*this->particles_->template getVariableDataByName<Real>("TurblunetViscosityProfile")),
+          mu_t_(*this->particles_->template getVariableDataByName<Real>("TurblunetViscosity")),
           turbulent_viscous_force_(*this->particles_->template registerSharedVariable<Vecd>("TurbulentViscousForce")),
           smoothing_length_(this->sph_body_.sph_adaptation_->ReferenceSmoothingLength()) {}
     //=================================================================================================//
@@ -32,7 +32,7 @@ namespace SPH
         {
             size_t index_j = inner_neighborhood.j_[n];
             const Vecd &e_ij = inner_neighborhood.e_ij_[n];
-            Real mu_t_avg = (2.0 * mu_tprof_[index_i] * mu_tprof_[index_j]) / (mu_tprof_[index_i] + mu_tprof_[index_j] + TinyReal);
+            Real mu_t_avg = (2.0 * mu_t_[index_i] * mu_t_[index_j]) / (mu_t_[index_i] + mu_t_[index_j]);
 
             // turbulent viscous force
             Vecd vel_derivative = (vel_[index_i] - vel_[index_j]) /
@@ -49,7 +49,7 @@ namespace SPH
           rho_(*this->particles_->template getVariableDataByName<Real>("Density")),
           mass_(*this->particles_->template getVariableDataByName<Real>("Mass")),
           Vol_(*this->particles_->template getVariableDataByName<Real>("VolumetricMeasure")),
-          Kprof_(*this->particles_->template getVariableDataByName<Real>("TKEProfile")),
+          K_(*this->particles_->template getVariableDataByName<Real>("TKE")),
           tke_gradient_force_(*this->particles_->template registerSharedVariable<Vecd>("TkeGradientForce"))
           {}
     //=================================================================================================//
@@ -68,7 +68,7 @@ namespace SPH
             const Vecd &e_ij = inner_neighborhood.e_ij_[n];
 
             // tke gradient force
-            force += (inner_neighborhood.dW_ij_[n] * Vol_[index_j] * rho_[index_i] * (2.0 / 3.0) * (Kprof_[index_i] - Kprof_[index_j]) * Matd::Identity()) * e_ij;
+            force += (inner_neighborhood.dW_ij_[n] * Vol_[index_j] * rho_[index_i] * (2.0 / 3.0) * (K_[index_i] - K_[index_j]) * Matd::Identity()) * e_ij;
         }
 
         tke_gradient_force_[index_i] = force * Vol_[index_i];

@@ -25,7 +25,7 @@ int main(int ac, char *av[])
     //----------------------------------------------------------------------
     //	Creating body, materials and particles.
     //----------------------------------------------------------------------
-    FluidBody water_block(sph_system, makeShared<WaterBlock>("Turbulent"));
+    FluidBody water_block(sph_system, makeShared<WaterBlock>("NoProfiles"));
     water_block.defineMaterial<WeaklyCompressibleFluid>(rho0_f, c_f, mu_f);
     Ghost<ReserveSizeFactor> ghost_boundary(0.5);
     water_block.generateParticlesWithReserve<BaseParticles, UnstructuredMesh>(ghost_boundary, read_mesh_data);
@@ -35,7 +35,7 @@ int main(int ac, char *av[])
     //	Define body relation map.
     //----------------------------------------------------------------------
     InnerRelationInFVM water_block_inner(water_block, read_mesh_data);
-    SimpleDynamics<fluid_dynamics::Kepsprofiles> profiles(water_block_inner, meshdatapath);
+    //SimpleDynamics<fluid_dynamics::Kepsprofiles> profiles(water_block_inner, meshdatapath);
     
     //SimpleDynamics<fluid_dynamics::WallAdjacentCells> wall_adj_cell(water_block_inner, ghost_creation);
     //----------------------------------------------------------------------
@@ -68,7 +68,7 @@ int main(int ac, char *av[])
     ReducedQuantityRecording<MaximumSpeed> write_maximum_speed(water_block);
 
     initial_condition.exec();
-    profiles.exec();
+    //profiles.exec();
     water_block_inner.updateConfiguration();
     write_real_body_states.addToWrite<Real>(water_block, "Density");
     write_real_body_states.addToWrite<Real>(water_block, "Pressure");
@@ -76,8 +76,6 @@ int main(int ac, char *av[])
     write_real_body_states.addToWrite<Real>(water_block, "TKE");
     write_real_body_states.addToWrite<Real>(water_block, "Dissipation");
     write_real_body_states.addToWrite<Real>(water_block, "TurblunetViscosity");
-    write_real_body_states.addToWrite<Real>(water_block, "DissipationProfile");
-    write_real_body_states.addToWrite<Real>(water_block, "TurblunetViscosityProfile");
     write_real_body_states.addToWrite<Vecd>(water_block, "MomentumChangeRate");
     write_real_body_states.addToWrite<Real>(water_block, "MassChangeRate");
     write_real_body_states.addToWrite<Vecd>(water_block, "MomentumAdvection");
@@ -110,9 +108,9 @@ int main(int ac, char *av[])
     //	Setup for time-stepping control
     //----------------------------------------------------------------------
     size_t number_of_iterations = 0;
-    int screen_output_interval = 15000;
-    Real end_time = 3000.0;
-    Real output_interval = 30.0; /**< time stamps for output. */ 
+    int screen_output_interval = 5000;
+    Real end_time = 100.0;
+    Real output_interval = 0.1; /**< time stamps for output. */ 
     //----------------------------------------------------------------------
     //	Statistics for CPU time
     //----------------------------------------------------------------------
@@ -163,11 +161,11 @@ int main(int ac, char *av[])
                 write_real_body_states.writeToFile();
                 //Real c = 1.0;
             }*/ 
-            //write_real_body_states.writeToFile();
+            write_real_body_states.writeToFile();
             //write_maximum_speed.writeToFile(number_of_iterations);
         }
         TickCount t2 = TickCount::now();
-         write_real_body_states.writeToFile();
+         //write_real_body_states.writeToFile();
         //write_maximum_speed.writeToFile(number_of_iterations);
         TickCount t3 = TickCount::now();
         interval += t3 - t2;

@@ -25,7 +25,7 @@ class TurbulentViscousForceInFVM<DataDelegationType>
         virtual ~TurbulentViscousForceInFVM(){};
 
       protected:
-        StdLargeVec<Real> &rho_, &mass_, &Vol_, &mu_tprof_;
+        StdLargeVec<Real> &rho_, &mass_, &Vol_, &mu_t_;
         StdLargeVec<Vecd> &vel_, &turbulent_viscous_force_;
         Real smoothing_length_;
 };
@@ -54,7 +54,7 @@ class TurbulentViscousForceInFVM<DataDelegationType>
         virtual ~TkeGradientForceInFVM(){};
 
       protected:
-        StdLargeVec<Real> &rho_, &mass_, &Vol_, &Kprof_;
+        StdLargeVec<Real> &rho_, &mass_, &Vol_, &K_;
         StdLargeVec<Vecd> &tke_gradient_force_;
     };
 

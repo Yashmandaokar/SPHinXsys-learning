@@ -10,21 +10,6 @@ namespace SPH
 {
     namespace fluid_dynamics
     {
-        class Kepsprofiles : public BaseIntegration<DataDelegateInner>
-        {
-            public:
-            explicit Kepsprofiles(BaseInnerRelation &inner_relation, const std::string &meshdatafull_path);
-
-            // Method to interpolate vaariables at a given y-coordinate
-            void update(size_t index_i, Real dt);
-            void meshdata(const std::string &meshdatafull_path);
-
-            protected:
-            StdLargeVec<Real> x_coords_, y_coords_, tke_profile_, dissipation_profile_, mu_t_profile_, p;
-            StdLargeVec<Real> &Kprof_, &Epsprof_, &mu_tprof_;
-            StdLargeVec<Vecd> &vel_prof_;
-            StdLargeVec<Real> x_velocity_profile_, y_velocity_profile_;
-        };
     //=================================================================================================//
         class BaseTurbulence : public BaseIntegration<DataDelegateInner>
         {
@@ -40,7 +25,7 @@ namespace SPH
             StdLargeVec<Real> &Eps_adv_, &Eps_lap_, &Eps_prodscalar_, &Eps_scalar_;
             Real Cmu_, sigmak_;
             Real sigmaeps_, C1eps_, C2eps_;
-            StdLargeVec<Real> &Kprof_, &Epsprof_, &mu_tprof_, &Tau_wall_;
+            StdLargeVec<Real> &Tau_wall_;
             StdLargeVec<Real> &K_, &Eps_, &mu_t_;
             GhostCreationFromMesh& ghost_creator_;
         };
