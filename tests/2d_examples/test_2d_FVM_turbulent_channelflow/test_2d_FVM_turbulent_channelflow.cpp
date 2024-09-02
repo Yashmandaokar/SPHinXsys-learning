@@ -29,7 +29,6 @@ int main(int ac, char *av[])
     water_block.defineMaterial<WeaklyCompressibleFluid>(rho0_f, c_f, mu_f);
     Ghost<ReserveSizeFactor> ghost_boundary(0.5);
     water_block.generateParticlesWithReserve<BaseParticles, UnstructuredMesh>(ghost_boundary, read_mesh_data);
-    
     GhostCreationFromMesh ghost_creation(water_block, read_mesh_data, ghost_boundary);
     //----------------------------------------------------------------------
     //	Define body relation map.

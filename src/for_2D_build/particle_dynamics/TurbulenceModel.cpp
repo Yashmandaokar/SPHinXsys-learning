@@ -189,8 +189,7 @@ namespace SPH
                    if (index_i == 773)
                    {
                         Real x = 1.0;
-                   }*/ 
-   
+                   }*/    
                 }
                 K_prod_[index_i] = K_prod_p_[index_i];
                 Eps_[index_i] = Eps_p_[index_i];
@@ -218,7 +217,7 @@ namespace SPH
                     vel_matrix = (vel_[index_i] - vel_[index_j]) * e_ij.transpose();
                     vel_gradient_mat = dW_ij * Vol_[index_j] * vel_matrix;
                     vel_gradient_mat_[index_i] += vel_gradient_mat;
-                    // vel_gradient_mat_transpose = dW_ij * Vol_[index_j] * vel_matrix.transpose();
+                    /*
                     strain_tensor = 0.5 * (vel_gradient_mat + vel_gradient_mat.transpose());
                     strain_rate_modulus = 2.0 * strain_tensor.array() * strain_tensor.array();
                     
@@ -227,28 +226,19 @@ namespace SPH
                     K_prod_total = K_prod - K_prod_iso;
                     Real Ktot = K_prod_total.sum();
                     K_prod_[index_i] += K_prod.sum();
-                    //Eps_sum_[index_i] += -rho_[index_i] * Eps_[index_i];
-
-                    if (index_i == 23070)
-                    {
-                        Vecd veli = vel_[index_i];
-                        Vecd velj = vel_[index_j];
-                        Matd velgrad = vel_gradient_mat_[index_i];
-                        Real sr = strain_rate_[index_i];
-                        Real Kprodtot = K_prod_total.sum();
-                        Real volj = Vol_[index_j];
-                        Real dudx = vel_gradient_mat_[index_i](0, 0);
-                        Real dudy = vel_gradient_mat_[index_i](0, 1);
-                        Real dvdx = vel_gradient_mat_[index_i](1, 0);
-                        Real dvdy = vel_gradient_mat_[index_i](1, 1);
-                        Real k = 1.0;
-
-                    }
+                    */  
                 }
+                strain_tensor = 0.5 * (vel_gradient_mat_[index_i] + vel_gradient_mat_[index_i].transpose());
+                strain_rate_modulus = 2.0 * strain_tensor.array() * strain_tensor.array();
+
+                K_prod = mu_t_[index_i] * strain_rate_modulus;
+               
+                K_prod_[index_i] += K_prod.sum();
+                strain_rate_[index_i] = sqrt(strain_rate_modulus.sum());
                 //strain_rate_[index_i] = sqrt(K_prod_[index_i]/mu_tprof_[index_i);
-                Matd total_strain_tensor = 0.5 * (vel_gradient_mat_[index_i] + vel_gradient_mat_[index_i].transpose());
-                Matd total_strain_modulus = 2.0 * total_strain_tensor.array() * total_strain_tensor.array();
-                strain_rate_[index_i] = sqrt(total_strain_modulus.sum());
+                //Matd total_strain_tensor = 0.5 * (vel_gradient_mat_[index_i] + vel_gradient_mat_[index_i].transpose());
+                //Matd total_strain_modulus = 2.0 * total_strain_tensor.array() * total_strain_tensor.array();
+                //strain_rate_[index_i] = sqrt(total_strain_modulus.sum());
                 dudx_[index_i] = vel_gradient_mat_[index_i](0, 0);
                 dudy_[index_i] = vel_gradient_mat_[index_i](0, 1);
                 dvdx_[index_i] = vel_gradient_mat_[index_i](1, 0);
@@ -294,14 +284,13 @@ namespace SPH
 
                     Eps_adv_[index_i] += -(dW_ij * Vol_[index_j] * rho_[index_i] * (Eps_[index_i] - Eps_[index_j]) * vel_[index_i]).dot(e_ij);
                     Eps_lap_[index_i] += 2.0 * dW_ij * Vol_[index_j] * (fluid_.ReferenceViscosity() + mu_t_avg / sigmaeps_) * ((Eps_[index_i] - Eps_[index_j]) / (r_ij));
-                    Eps_prodscalar_[index_i] += C1eps_ * (Eps_[index_i] / (K_[index_i])) * K_prod_[index_i];
-                    Eps_changerate = Eps_adv_[index_i] + Eps_prodscalar_[index_i] + Eps_scalar_[index_i] + Eps_lap_[index_i];
+                    
+                    Eps_changerate = Eps_adv_[index_i] + Eps_lap_[index_i];
                 }
+                Eps_prodscalar_[index_i] = C1eps_ * (Eps_[index_i] / (K_[index_i])) * K_prod_[index_i];
                 Eps_scalar_[index_i] = -C2eps_ * rho_[index_i] * (Eps_[index_i] * Eps_[index_i]) / (K_[index_i]);
-                dEps_dt_[index_i] = Eps_changerate + Eps_scalar_[index_i];
-                
-            }  
-        
+                dEps_dt_[index_i] = Eps_changerate + Eps_prodscalar_[index_i] + Eps_scalar_[index_i];
+        }
         //=================================================================================================//
         void KEpsilonStd2ndHalf::update(size_t index_i, Real dt)
         {
