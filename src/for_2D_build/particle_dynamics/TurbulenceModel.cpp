@@ -410,7 +410,7 @@ namespace SPH
             K_prod_[index_i] = 0.0, K_adv_[index_i] = 0.0, K_lap_[index_i] = 0.0, strain_rate_[index_i] = 0.0;
             Eps_sum_[index_i] = 0.0, dudx_[index_i] = 0.0, dudy_[index_i] = 0.0, dvdx_[index_i] = 0.0, dvdy_[index_i] = 0.0;
             vel_gradient_mat_[index_i] = Matd::Zero();
-            //mu_tprof_[index_i] = rho_[index_i] * Cmu_ * ((Kprof_[index_i] * Kprof_[index_i]) / (Epsprof_[index_i]));
+            mu_tprof_[index_i] = rho_[index_i] * Cmu_ * ((Kprof_[index_i] * Kprof_[index_i]) / (Epsprof_[index_i]));
 
             if (walladjacentcellflag_[index_i] == 1.0)
             {
@@ -421,10 +421,10 @@ namespace SPH
                     Real dW_ij = inner_neighborhood.dW_ij_[n];
                     Real r_ij = inner_neighborhood.r_ij_[n];
                     Vecd &e_ij = inner_neighborhood.e_ij_[n];
-                    //Real mu_t_avg = (2.0 * mu_tprof_[index_i] * mu_tprof_[index_j]) / (mu_tprof_[index_i] + mu_tprof_[index_j] + TinyReal);
+                    Real mu_t_avg = (2.0 * mu_tprof_[index_i] * mu_tprof_[index_j]) / (mu_tprof_[index_i] + mu_tprof_[index_j] + TinyReal);
 
-                    K_adv_[index_i] += -(dW_ij * Vol_[index_j] * rho_[index_i] * (Kprof_[index_i] - Kprof_[index_j]) * e_ij).dot(vel_[index_i]);
-                    K_lap_[index_i] += 2.0 * dW_ij * Vol_[index_j] * ((fluid_.ReferenceViscosity() + mu_tprof_[index_i] / sigmak_) * (Kprof_[index_i] - Kprof_[index_j]) / (r_ij));
+                    K_adv_[index_i] += -(dW_ij * Vol_[index_j] * rho_[index_i] * (Kprof_[index_i] - Kprof_[index_j]) * vel_[index_i]).dot(e_ij);
+                    K_lap_[index_i] += 2.0 * dW_ij * Vol_[index_j] * ((fluid_.ReferenceViscosity() + mu_t_avg / sigmak_) * (Kprof_[index_i] - Kprof_[index_j]) / (r_ij));
                     
                    /*
                    vel_matrix = (vel_[index_i] - vel_[index_j]) * e_ij.transpose();
@@ -438,7 +438,7 @@ namespace SPH
    
                 }
                 K_prod_[index_i] = K_prod_p_[index_i];
-                //Epsprof_[index_i] = Eps_p_[index_i];
+                Epsprof_[index_i] = Eps_p_[index_i];
                 strain_rate_[index_i] = std::sqrt(K_prod_[index_i] / mu_tprof_[index_i]);
                 dudx_[index_i] = vel_gradient_mat_[index_i](0, 0);
                 dudy_[index_i] = vel_gradient_mat_[index_i](0, 1);
@@ -456,44 +456,26 @@ namespace SPH
                     Real dW_ij = inner_neighborhood.dW_ij_[n];
                     Real r_ij = inner_neighborhood.r_ij_[n];
                     Vecd &e_ij = inner_neighborhood.e_ij_[n];
-                    //Real mu_t_avg = (2.0 * mu_tprof_[index_i] * mu_tprof_[index_j]) / (mu_tprof_[index_i] + mu_tprof_[index_j] + TinyReal);
+                    Real mu_t_avg = (2.0 * mu_tprof_[index_i] * mu_tprof_[index_j]) / (mu_tprof_[index_i] + mu_tprof_[index_j] + TinyReal);
 
-                    K_adv_[index_i] += -(dW_ij * Vol_[index_j] * rho_[index_i] * (Kprof_[index_i] - Kprof_[index_j]) * e_ij).dot(vel_[index_i]);
-                    K_lap_[index_i] += 2.0 * dW_ij * Vol_[index_j] * ((fluid_.ReferenceViscosity() + mu_tprof_[index_i] / sigmak_) * (Kprof_[index_i] - Kprof_[index_j]) / (r_ij));
+                    K_adv_[index_i] += -(dW_ij * Vol_[index_j] * rho_[index_i] * (Kprof_[index_i] - Kprof_[index_j]) * vel_[index_i]).dot(e_ij);
+                    K_lap_[index_i] += 2.0 * dW_ij * Vol_[index_j] * ((fluid_.ReferenceViscosity() + mu_t_avg / sigmak_) * (Kprof_[index_i] - Kprof_[index_j]) / (r_ij));
                     vel_matrix = (vel_[index_i] - vel_[index_j]) * e_ij.transpose();
                     vel_gradient_mat = dW_ij * Vol_[index_j] * vel_matrix;
                     vel_gradient_mat_[index_i] += vel_gradient_mat;
                     // vel_gradient_mat_transpose = dW_ij * Vol_[index_j] * vel_matrix.transpose();
-                    strain_tensor = 0.5 * (vel_gradient_mat + vel_gradient_mat.transpose());
-                    strain_rate_modulus = 2.0 * strain_tensor.array() * strain_tensor.array();
-                    
-                    K_prod = mu_tprof_[index_i] * strain_rate_modulus;
-                    K_prod_iso = (2.0 / 3.0 * rho_[index_i] * Kprof_[index_i] * Matd::Identity()).array() * vel_gradient_mat.array();
-                    K_prod_total = K_prod - K_prod_iso;
-                    Real Ktot = K_prod_total.sum();
-                    K_prod_[index_i] += K_prod.sum();
-                    Eps_sum_[index_i] += -rho_[index_i] * Epsprof_[index_i];
-
-                    if (index_i == 23070)
-                    {
-                        Vecd veli = vel_[index_i];
-                        Vecd velj = vel_[index_j];
-                        Matd velgrad = vel_gradient_mat_[index_i];
-                        Real sr = strain_rate_[index_i];
-                        Real Kprodtot = K_prod_total.sum();
-                        Real volj = Vol_[index_j];
-                        Real dudx = vel_gradient_mat_[index_i](0, 0);
-                        Real dudy = vel_gradient_mat_[index_i](0, 1);
-                        Real dvdx = vel_gradient_mat_[index_i](1, 0);
-                        Real dvdy = vel_gradient_mat_[index_i](1, 1);
-                        Real k = 1.0;
-
-                    }
                 }
-                //strain_rate_[index_i] = sqrt(K_prod_[index_i]/mu_tprof_[index_i);
-                Matd total_strain_tensor = 0.5 * (vel_gradient_mat_[index_i] + vel_gradient_mat_[index_i].transpose());
-                Matd total_strain_modulus = 2.0 * total_strain_tensor.array() * total_strain_tensor.array();
-                strain_rate_[index_i] = sqrt(total_strain_modulus.sum());
+                strain_tensor = 0.5 * (vel_gradient_mat_[index_i] + vel_gradient_mat_[index_i].transpose());
+                strain_rate_modulus = 2.0 * strain_tensor.array() * strain_tensor.array();
+
+                K_prod = mu_tprof_[index_i] * strain_rate_modulus;
+                K_prod_iso = (2.0 / 3.0 * rho_[index_i] * Kprof_[index_i] * Matd::Identity()).array() * vel_gradient_mat.array();
+                K_prod_total = K_prod - K_prod_iso;
+                K_prod_[index_i] += K_prod.sum();
+                strain_rate_[index_i] = sqrt(strain_rate_modulus.sum());
+                //Matd total_strain_tensor = 0.5 * (vel_gradient_mat_[index_i] + vel_gradient_mat_[index_i].transpose());
+                //Matd total_strain_modulus = 2.0 * total_strain_tensor.array() * total_strain_tensor.array();
+                //strain_rate_[index_i] = sqrt(total_strain_modulus.sum());
                 dudx_[index_i] = vel_gradient_mat_[index_i](0, 0);
                 dudy_[index_i] = vel_gradient_mat_[index_i](0, 1);
                 dvdx_[index_i] = vel_gradient_mat_[index_i](1, 0);
@@ -527,38 +509,32 @@ namespace SPH
             Neighborhood &inner_neighborhood = inner_configuration_[index_i];
             if (walladjacentcellflag_[index_i] != 1)
             {
-                //mu_tprof_[index_i] = rho_[index_i] * Cmu_ * ((Kprof_[index_i] * Kprof_[index_i]) / (Epsprof_[index_i]));
+                mu_tprof_[index_i] = rho_[index_i] * Cmu_ * ((Kprof_[index_i] * Kprof_[index_i]) / (Epsprof_[index_i]));
+            }
                 for (size_t n = 0; n != inner_neighborhood.current_size_; ++n)
                 {
                     size_t index_j = inner_neighborhood.j_[n];
                     Real dW_ij = inner_neighborhood.dW_ij_[n];
                     Real r_ij = inner_neighborhood.r_ij_[n];
                     Vecd &e_ij = inner_neighborhood.e_ij_[n];
-                    //Real mu_t_avg = (2.0 * mu_tprof_[index_i] * mu_tprof_[index_j]) / (mu_tprof_[index_i] + mu_tprof_[index_j] + TinyReal);
+                    Real mu_t_avg = (2.0 * mu_tprof_[index_i] * mu_tprof_[index_j]) / (mu_tprof_[index_i] + mu_tprof_[index_j] + TinyReal);
 
-                    Eps_adv_[index_i] += -(dW_ij * Vol_[index_j] * rho_[index_i] * (Epsprof_[index_i] - Epsprof_[index_j]) * e_ij).dot(vel_[index_i]);
-                    Eps_lap_[index_i] += 2.0 * dW_ij * Vol_[index_j] * (fluid_.ReferenceViscosity() + mu_tprof_[index_i] / sigmaeps_) * ((Epsprof_[index_i] - Epsprof_[index_j]) / (r_ij));
-                    Eps_prodscalar_[index_i] += C1eps_ * (Epsprof_[index_i] / (Kprof_[index_i])) * K_prod_[index_i];
-                    Eps_scalar_[index_i] += -C2eps_ * rho_[index_i] * (Epsprof_[index_i] * Epsprof_[index_i]) / (Kprof_[index_i]);
-                    Eps_changerate = Eps_adv_[index_i] + Eps_prodscalar_[index_i] + Eps_scalar_[index_i] + Eps_lap_[index_i];
-
+                    Eps_adv_[index_i] += -(dW_ij * Vol_[index_j] * rho_[index_i] * (Epsprof_[index_i] - Epsprof_[index_j]) * vel_[index_i]).dot(e_ij);
+                    Eps_lap_[index_i] += 2.0 * dW_ij * Vol_[index_j] * (fluid_.ReferenceViscosity() + mu_t_avg / sigmaeps_) * ((Epsprof_[index_i] - Epsprof_[index_j]) / (r_ij));
+                    
+                    Eps_changerate = Eps_adv_[index_i] + Eps_lap_[index_i];
                 }
-                dEps_dt_[index_i] = Eps_changerate;
-                
-            }  
-        }
+                Eps_prodscalar_[index_i] = C1eps_ * (Epsprof_[index_i] / (Kprof_[index_i])) * K_prod_[index_i];
+                Eps_scalar_[index_i] = -C2eps_ * rho_[index_i] * (Epsprof_[index_i] * Epsprof_[index_i]) / (Kprof_[index_i]);
+                dEps_dt_[index_i] = Eps_changerate + Eps_prodscalar_[index_i] + Eps_scalar_[index_i];  
+        }  
+        
         //=================================================================================================//
         void KEpsilonStd2ndHalf::update(size_t index_i, Real dt)
         {
             if (walladjacentcellflag_[index_i] != 1)
             {
                 Eps_[index_i] += (dEps_dt_[index_i] / rho_[index_i]) * dt;
-            }
-            if (Eps_[index_i] < 0.0)
-            {
-                Real edt = dEps_dt_[index_i];
-                Real e = Eps_[index_i];
-                Real K = 1.0;
             }
         }
         //=================================================================================================//
@@ -578,21 +554,14 @@ namespace SPH
             ystar_[index_i] = (rho_[index_i] * std::pow(Cmu_, 0.25) * std::pow(Kprof_[index_i], 0.5) * yp) / (fluid_.ReferenceViscosity());
             Real u_star, mu_eff_wall, friction_velocity;
             Vecd veltangential = (vel_[index_i] - e_ij.dot(vel_[index_i]) * (e_ij));
-            if (index_i == 7614)
-            {
-                Real h = 1.3;
-            }
+            
             if (ystar_[index_i] >= 11.225)
             {
                 u_star = (1.0 / vonkar_) * std::log(E_ * ystar_[index_i]);
                 mu_tprof_[index_i] = fluid_.ReferenceViscosity() * ((ystar_[index_i]) / (1 / vonkar_ * std::log(E_ * ystar_[index_i])) - 1.0);
                 Tau_wall_[index_i] = (mu_tprof_[index_i] + fluid_.ReferenceViscosity()) * (veltangential.norm() / yp);
                 //Tau_wall_[index_i] = (veltangential.norm() * std::pow(Cmu_, 0.25) * std::pow(Kprof_[index_i], 0.5) * rho_[index_i]) / (u_star);
-                vel_gradient_mat_[index_i](0, 1) = (Tau_wall_[index_i] / (mu_tprof_[index_i] + fluid_.ReferenceViscosity())) * e_ij[1];
-                //mu_eff_wall = Tau_wall_[index_i] * yp / (veltangential.norm());
-                // mu_eff_wall_1 = wall_shear_stress_1 * yp_[index_i] / (veltangential.norm());
-                //friction_velocity = std::sqrt(Tau_wall_[index_i] / rho_[index_i]);
-                // friction_velocity_1 = std::sqrt(wall_shear_stress_1 / rho_[index_i]);
+                vel_gradient_mat_[index_i](0, 1) = (Tau_wall_[index_i] / (mu_tprof_[index_i] + fluid_.ReferenceViscosity())) * e_ij[1];         
 
                 K_prod_p_[index_i] = std::pow(Tau_wall_[index_i], 2.0) / (vonkar_ * rho_[index_i] * std::pow(Cmu_, 0.25) * std::pow(Kprof_[index_i], 0.5) * yp);
                 Eps_p_[index_i] = (std::pow(Cmu_, 3.0 / 4.0) * std::pow(Kprof_[index_i], 1.5)) / (vonkar_ * yp);

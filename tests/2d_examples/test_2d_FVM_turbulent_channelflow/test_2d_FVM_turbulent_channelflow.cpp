@@ -77,6 +77,7 @@ int main(int ac, char *av[])
     write_real_body_states.addToWrite<Real>(water_block, "Dissipation");
     write_real_body_states.addToWrite<Real>(water_block, "TurblunetViscosity");
     write_real_body_states.addToWrite<Real>(water_block, "DissipationProfile");
+    write_real_body_states.addToWrite<Real>(water_block, "TKEProfile");
     write_real_body_states.addToWrite<Real>(water_block, "TurblunetViscosityProfile");
     write_real_body_states.addToWrite<Vecd>(water_block, "MomentumChangeRate");
     write_real_body_states.addToWrite<Real>(water_block, "MassChangeRate");
@@ -103,7 +104,6 @@ int main(int ac, char *av[])
     write_real_body_states.addToWrite<Real>(water_block, "dvdx");
     write_real_body_states.addToWrite<Real>(water_block, "dvdy");
     write_real_body_states.addToWrite<Matd>(water_block, "VelocityGradient");
-    
     //write_real_body_states.addToWrite<Vecd>(water_block, "ShearForce");
 
     //----------------------------------------------------------------------
@@ -163,11 +163,11 @@ int main(int ac, char *av[])
                 write_real_body_states.writeToFile();
                 //Real c = 1.0;
             }*/ 
-            //write_real_body_states.writeToFile();
+            write_real_body_states.writeToFile();
             //write_maximum_speed.writeToFile(number_of_iterations);
         }
         TickCount t2 = TickCount::now();
-         write_real_body_states.writeToFile();
+         //write_real_body_states.writeToFile();
         //write_maximum_speed.writeToFile(number_of_iterations);
         TickCount t3 = TickCount::now();
         interval += t3 - t2;

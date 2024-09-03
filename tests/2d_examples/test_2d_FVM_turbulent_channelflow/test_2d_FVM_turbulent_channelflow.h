@@ -88,7 +88,8 @@ class TCFInitialCondition
         K_[index_i] = (3.0 / 2.0) * (initial_velocity.squaredNorm()) * (I * I);
         Eps_[index_i] = rho_[index_i] * C_mu_ * ((K_[index_i] * K_[index_i]) / (mu_f)) * (1 / viscosityRatio);
         mu_t_[index_i] = mu_f * viscosityRatio;
-        mom_[index_i][0] = mass_[index_i];
+        mass_[index_i] = rho_[index_i] * Vol_[index_i];
+        mom_[index_i] = mass_[index_i] * vel_[index_i];
     }
 protected:
   Real C_mu_;

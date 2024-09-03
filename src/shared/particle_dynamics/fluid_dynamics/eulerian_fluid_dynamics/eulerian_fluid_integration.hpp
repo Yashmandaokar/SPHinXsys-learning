@@ -61,7 +61,7 @@ template <class RiemannSolverType>
 void EulerianIntegration1stHalf<Inner<>, RiemannSolverType>::update(size_t index_i, Real dt)
 {
     mom_[index_i] += (dmom_dt_[index_i] + force_prior_[index_i]) * dt;
-    vel_[index_i] = mom_[index_i] / mass_[index_i];
+    //vel_[index_i] = mom_[index_i] / mass_[index_i];
     if (index_i == 8269)
     {
         Vecd visforce = force_prior_[index_i];
@@ -145,8 +145,8 @@ template <class RiemannSolverType>
 void EulerianIntegration2ndHalf<Inner<>, RiemannSolverType>::update(size_t index_i, Real dt)
 {
     mass_[index_i] += dmass_dt_[index_i] * dt;
-    rho_[index_i] = mass_[index_i] / Vol_[index_i];
-    p_[index_i] = fluid_.getPressure(rho_[index_i]);
+    //rho_[index_i] = mass_[index_i] / Vol_[index_i];
+    //p_[index_i] = fluid_.getPressure(rho_[index_i]);
     if (index_i == 8269)
     {
         Real mass = mass_[index_i];
