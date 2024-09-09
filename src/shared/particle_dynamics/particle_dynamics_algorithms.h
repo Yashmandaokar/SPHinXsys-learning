@@ -259,7 +259,7 @@ class InteractionDynamics : public BaseInteractionDynamics<LocalDynamicsType, Ex
  * @class InteractionWithUpdate
  * @brief This class includes an interaction and a update steps
  */
-template <class LocalDynamicsType, class ExecutionPolicy = ParallelPolicy>
+template <class LocalDynamicsType, class ExecutionPolicy = SequencedPolicy>
 class InteractionWithUpdate : public InteractionDynamics<LocalDynamicsType, ExecutionPolicy>
 {
   public:

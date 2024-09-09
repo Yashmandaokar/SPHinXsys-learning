@@ -30,7 +30,6 @@ namespace SPH
             GhostCreationFromMesh& ghost_creator_;
         };
         //=================================================================================================//
-        /*
         class WallAdjacentCells : public BaseTurbulence
         {
         public:
@@ -46,8 +45,9 @@ namespace SPH
 
            void walladjacentcellyp();
            void update(size_t index_i, Real dt);
-        };*/ 
+        };
         //=================================================================================================//
+        /*
         class WallAdjacentCells : public BaseTurbulence
         {
          public:
@@ -60,6 +60,7 @@ namespace SPH
 
            void walladjacentcellyp();
         };
+        */ 
         //=================================================================================================//
         /*
         class StdWallFunctionFVM : public BaseTurbulence

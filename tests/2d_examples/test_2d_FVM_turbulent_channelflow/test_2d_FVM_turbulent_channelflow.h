@@ -29,7 +29,8 @@ Real mu_f = (rho0_f * U_f * DH * 0.5) / rey_bulk;       /**< Dynamic Viscosity. 
 Real c_f = 10.0 * U_f;                               /**< Reference sound speed. */
 
 Real I = 0.05;
-Real viscosityRatio = 10;//check this
+Real hydraulic_dia = 0.07 * 2 * DH / std::pow(0.09, 0.75);
+//Real viscosityRatio = 10.0;//check this
 //----------------------------------------------------------------------
 //	Set the file path to the data file.
 //----------------------------------------------------------------------
@@ -83,8 +84,9 @@ class TCFInitialCondition
         Vecd initial_velocity(1.0, 0.0);
         vel_[index_i] = initial_velocity;
         K_[index_i] = (3.0 / 2.0) * (initial_velocity.squaredNorm()) * (I * I);
-        Eps_[index_i] = rho_[index_i] * C_mu_ * ((K_[index_i] * K_[index_i]) / (mu_f)) * (1 / viscosityRatio);
-        mu_t_[index_i] = mu_f * viscosityRatio;
+        //Eps_[index_i] = rho_[index_i] * C_mu_ * ((K_[index_i] * K_[index_i]) / (mu_f)) * (1 / viscosityRatio);
+        Eps_[index_i] = std::pow(K_[index_i], 1.5) / hydraulic_dia;
+        mu_t_[index_i] = rho_[index_i] * C_mu_ * ((K_[index_i] * K_[index_i]) / (Eps_[index_i]));      
         mass_[index_i] = rho_[index_i] * Vol_[index_i];
         mom_[index_i] = mass_[index_i] * vel_[index_i];
     }
@@ -136,8 +138,7 @@ public:
         rho_[ghost_index] = rho_[index_i];
         K_[ghost_index] = K_[index_i];
         Eps_[ghost_index] = Eps_[index_i];
-        mu_t_[ghost_index] = mu_t_[index_i]; // rho_[ghost_index] * C_mu_ * ((Kprof_[ghost_index] * Kprof_[ghost_index]) / (Epsprof_[ghost_index]))
-        //Tau_wall_[ghost_index] = Tau_wall_[index_i];
+        mu_t_[ghost_index] = mu_t_[index_i]; 
     }
     void applyVelocityInletFlow(size_t ghost_index, size_t index_i) override
     {
@@ -147,8 +148,9 @@ public:
         p_[ghost_index] = p_[index_i];     // p_ [index_i] 0.3;
         rho_[ghost_index] = rho_[index_i]; // rho_[index_i]; // rho_[index_i];fluid_.DensityFromPressure(0.025)
         K_[ghost_index] = (3.0 / 2.0) * (vel_[ghost_index].squaredNorm()) * (I * I);
-        Eps_[ghost_index] = rho_[index_i] * C_mu_ * ((K_[ghost_index] * K_[ghost_index]) / (mu_f)) * (1 / viscosityRatio);
-        mu_t_[ghost_index] = mu_f * viscosityRatio;
+        Eps_[ghost_index] = std::pow(K_[ghost_index], 1.5) / hydraulic_dia;
+        mu_t_[ghost_index] = rho_[index_i] * C_mu_ * ((K_[ghost_index] * K_[ghost_index]) / (Eps_[ghost_index]));   
+        //mu_t_[ghost_index] = mu_f * viscosityRatio;
     }
     void applyPressureOutletBC(size_t ghost_index, size_t index_i) override
     {
@@ -167,8 +169,8 @@ public:
             p_[ghost_index] = 0.0; // p_[index_i];
             rho_[ghost_index] = rho_[index_i];
             K_[ghost_index] = (3.0 / 2.0) * (vel_[ghost_index].squaredNorm()) * (I * I);
-            Eps_[ghost_index] = rho_[index_i] * C_mu_ * ((K_[ghost_index] * K_[ghost_index]) / (mu_f)) * (1 / viscosityRatio);
-            mu_t_[ghost_index] = mu_f * viscosityRatio;
+            Eps_[ghost_index] = std::pow(K_[ghost_index], 1.5) / hydraulic_dia;
+            mu_t_[ghost_index] = rho_[index_i] * C_mu_ * ((K_[ghost_index] * K_[ghost_index]) / (Eps_[ghost_index]));  
         }
         
     }

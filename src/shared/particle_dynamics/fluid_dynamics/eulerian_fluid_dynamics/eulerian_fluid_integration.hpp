@@ -46,13 +46,6 @@ void EulerianIntegration1stHalf<Inner<>, RiemannSolverType>::interaction(size_t 
 
         mom_advection_[index_i] -= 2.0 * Vol_[index_i] * (convect_flux) * e_ij * dW_ijV_j;
         pressuregrad_[index_i] -= 2.0 * Vol_[index_i] * (interface_state.p_ * Matd::Identity()) * e_ij * dW_ijV_j;
-        if (index_i == 8269)
-        {
-            Vecd momentum_rate = -2.0 * Vol_[index_i] * (convect_flux + interface_state.p_ * Matd::Identity()) * e_ij * dW_ijV_j;
-            Vecd Advflux = -2.0 * Vol_[index_i] * convect_flux * e_ij * dW_ijV_j;
-            Vecd prgrad = -2.0 * Vol_[index_i] * interface_state.p_ * Matd::Identity() * e_ij * dW_ijV_j;
-            Real x = 1;
-        }
     }
     dmom_dt_[index_i] = momentum_change_rate;
 }
@@ -108,7 +101,6 @@ EulerianIntegration2ndHalf<Inner<>, RiemannSolverType>::
 template <class RiemannSolverType>
 void EulerianIntegration2ndHalf<Inner<>, RiemannSolverType>::interaction(size_t index_i, Real dt)
 {
-    //vel_[index_i] = vel_prof_[index_i];
     FluidStateIn state_i(rho_[index_i], vel_[index_i], p_[index_i]);
     Real mass_change_rate = 0.0;
     Neighborhood &inner_neighborhood = inner_configuration_[index_i];
@@ -118,17 +110,9 @@ void EulerianIntegration2ndHalf<Inner<>, RiemannSolverType>::interaction(size_t 
         Vecd &e_ij = inner_neighborhood.e_ij_[n];
         Real dW_ijV_j = inner_neighborhood.dW_ij_[n] * Vol_[index_j];
 
-        //vel_[index_j] = vel_prof_[index_j];
         FluidStateIn state_j(rho_[index_j], vel_[index_j], p_[index_j]);
         FluidStateOut interface_state = riemann_solver_.InterfaceState(state_i, state_j, e_ij);
         mass_change_rate -= 2.0 * Vol_[index_i] * (interface_state.rho_ * interface_state.vel_).dot(e_ij) * dW_ijV_j;
-        if (index_i == 8269)
-        {
-            Real voli = Vol_[index_i];
-            Real volj = Vol_[index_j];
-            Real c = 1.0;
-        }
-
     }
     dmass_dt_[index_i] = mass_change_rate;
 }
@@ -139,20 +123,6 @@ void EulerianIntegration2ndHalf<Inner<>, RiemannSolverType>::update(size_t index
     mass_[index_i] += dmass_dt_[index_i] * dt;
     rho_[index_i] = mass_[index_i] / Vol_[index_i];
     p_[index_i] = fluid_.getPressure(rho_[index_i]);
-    if (index_i == 8269)
-    {
-        Real mass = mass_[index_i];
-        Real rhoi = rho_[index_i];
-        Real pi = p_[index_i];
-        Real c = 1.0;
-    }
-    if (mass_[index_i] < 0)
-    {
-        Real pr = p_[index_i];
-        Real rho = rho_[index_i];
-        Real Mass = mass_[index_i];
-        Real y = 1.0;
-    }
 }
 //=================================================================================================//
 template <class RiemannSolverType>

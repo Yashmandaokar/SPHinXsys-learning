@@ -35,8 +35,6 @@ int main(int ac, char *av[])
     //----------------------------------------------------------------------
     InnerRelationInFVM water_block_inner(water_block, read_mesh_data);
     //SimpleDynamics<fluid_dynamics::Kepsprofiles> profiles(water_block_inner, meshdatapath);
-    
-    //SimpleDynamics<fluid_dynamics::WallAdjacentCells> wall_adj_cell(water_block_inner, ghost_creation);
     //----------------------------------------------------------------------
     //	Define the main numerical methods used in the simulation.
     //	Note that there may be data dependence on the constructors of these methods.
@@ -51,6 +49,7 @@ int main(int ac, char *av[])
     InteractionWithUpdate<fluid_dynamics::EulerianIntegration1stHalfInnerRiemann> pressure_relaxation(water_block_inner, 1.0);
     InteractionWithUpdate<fluid_dynamics::EulerianIntegration2ndHalfInnerRiemann> density_relaxation(water_block_inner, 10000.0);
     SimpleDynamics<TCFInitialCondition> initial_condition(water_block);
+    SimpleDynamics<fluid_dynamics::WallAdjacentCells> wall_adj_cell(water_block_inner, ghost_creation);
     
     InteractionWithUpdate<fluid_dynamics::KEpsilonStd1stHalf> tke(water_block_inner, ghost_creation);
     InteractionWithUpdate<fluid_dynamics::KEpsilonStd2ndHalf> dissipationrate(water_block_inner, ghost_creation);
@@ -67,6 +66,7 @@ int main(int ac, char *av[])
     ReducedQuantityRecording<MaximumSpeed> write_maximum_speed(water_block);
 
     initial_condition.exec();
+    wall_adj_cell.exec();
     //profiles.exec();
     water_block_inner.updateConfiguration();
     write_real_body_states.addToWrite<Real>(water_block, "Density");
@@ -109,7 +109,7 @@ int main(int ac, char *av[])
     size_t number_of_iterations = 0;
     int screen_output_interval = 5000;
     Real end_time = 100.0;
-    Real output_interval = 0.1; /**< time stamps for output. */ 
+    Real output_interval = 0.025; /**< time stamps for output. */ 
     //----------------------------------------------------------------------
     //	Statistics for CPU time
     //----------------------------------------------------------------------
@@ -127,7 +127,6 @@ int main(int ac, char *av[])
         Real integration_time = 0.0;
         while (integration_time < output_interval)
         {
-             //apply_gravity_force.exec();
             Real dt = get_fluid_time_step_size.exec();
             boundary_condition_setup.resetBoundaryConditions();
             tke.exec(dt);
@@ -153,18 +152,17 @@ int main(int ac, char *av[])
             }
             
             number_of_iterations++;
-            
-            /*
-            if (number_of_iterations >= 29450)
+                        
+            /* if (number_of_iterations >= 1695)
             {
                 write_real_body_states.writeToFile();
                 //Real c = 1.0;
-            }*/ 
-            write_real_body_states.writeToFile();
+            }*/
+            //write_real_body_states.writeToFile();
             //write_maximum_speed.writeToFile(number_of_iterations);
         }
         TickCount t2 = TickCount::now();
-         //write_real_body_states.writeToFile();
+        write_real_body_states.writeToFile();
         //write_maximum_speed.writeToFile(number_of_iterations);
         TickCount t3 = TickCount::now();
         interval += t3 - t2;
