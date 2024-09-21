@@ -25,7 +25,7 @@ int main(int ac, char *av[])
     //----------------------------------------------------------------------
     //	Creating body, materials and particles.
     //----------------------------------------------------------------------
-    FluidBody water_block(sph_system, makeShared<WaterBlock>("NoProfiles"));
+    FluidBody water_block(sph_system, makeShared<WaterBlock>("TkeAdvProblem"));
     water_block.defineMaterial<WeaklyCompressibleFluid>(rho0_f, c_f, mu_f);
     Ghost<ReserveSizeFactor> ghost_boundary(0.5);
     water_block.generateParticlesWithReserve<BaseParticles, UnstructuredMesh>(ghost_boundary, read_mesh_data);
@@ -47,7 +47,8 @@ int main(int ac, char *av[])
     SimpleDynamics<GravityForce> apply_gravity_force(water_block, time_dependent_acceleration);
     */
     InteractionWithUpdate<fluid_dynamics::EulerianIntegration1stHalfInnerRiemann> pressure_relaxation(water_block_inner, 1.0);
-    InteractionWithUpdate<fluid_dynamics::EulerianIntegration2ndHalfInnerRiemann> density_relaxation(water_block_inner, 10000.0);
+    InteractionWithUpdate<fluid_dynamics::EulerianIntegration2ndHalfInnerRiemann> density_relaxation(water_block_inner, 1000.0);
+    //InteractionWithUpdate<fluid_dynamics::EulerianIntegration2ndHalfInnerNoRiemann> density_relaxation(water_block_inner);
     SimpleDynamics<TCFInitialCondition> initial_condition(water_block);
     SimpleDynamics<fluid_dynamics::WallAdjacentCells> wall_adj_cell(water_block_inner, ghost_creation);
     
@@ -107,9 +108,9 @@ int main(int ac, char *av[])
     //	Setup for time-stepping control
     //----------------------------------------------------------------------
     size_t number_of_iterations = 0;
-    int screen_output_interval = 5000;
-    Real end_time = 100.0;
-    Real output_interval = 0.025; /**< time stamps for output. */ 
+    int screen_output_interval = 1000;
+    Real end_time = 50.0;
+    Real output_interval = 0.5; /**< time stamps for output. */ 
     //----------------------------------------------------------------------
     //	Statistics for CPU time
     //----------------------------------------------------------------------
@@ -153,11 +154,13 @@ int main(int ac, char *av[])
             
             number_of_iterations++;
                         
-            /* if (number_of_iterations >= 1695)
+            
+            /*if (number_of_iterations >= 200)
             {
                 write_real_body_states.writeToFile();
                 //Real c = 1.0;
             }*/
+            
             //write_real_body_states.writeToFile();
             //write_maximum_speed.writeToFile(number_of_iterations);
         }

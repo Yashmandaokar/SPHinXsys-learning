@@ -33,11 +33,12 @@ namespace SPH
             size_t index_j = inner_neighborhood.j_[n];
             const Vecd &e_ij = inner_neighborhood.e_ij_[n];
             Real mu_t_avg = (2.0 * mu_t_[index_i] * mu_t_[index_j]) / (mu_t_[index_i] + mu_t_[index_j]);
-
+            
+ 
             // turbulent viscous force
             Vecd vel_derivative = (vel_[index_i] - vel_[index_j]) /
                                   (inner_neighborhood.r_ij_[n] + 0.01 * smoothing_length_);
-            force += 2.0 * mu_t_avg * vel_derivative * inner_neighborhood.dW_ij_[n] * Vol_[index_j];
+            force += e_ij.dot(2.0 * e_ij) * mu_t_avg * vel_derivative * inner_neighborhood.dW_ij_[n] * Vol_[index_j];
         }
         turbulent_viscous_force_[index_i] = force * Vol_[index_i];
     }
